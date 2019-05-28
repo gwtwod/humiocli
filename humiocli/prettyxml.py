@@ -32,7 +32,7 @@ def process(
     # prepare for processing by splitting into chunks of tags and values
     xml_parts = [part for part in re_tag.split(rawstring) if part != ""]
 
-    if repair and not output_format.lower() == "kv":
+    if repair and output_format.lower() != "kv":
         xml_parts = repair_tags(xml_parts)
 
     if output_format.lower() == "pretty":

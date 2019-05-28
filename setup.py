@@ -40,5 +40,5 @@ setup(
     dependency_links=[
         'git+https://github.com/gwtwod/py3humiocore.git@504082e42b91c726e1fd6ea2bca0911d1f6df956#egg=humiocore'
     ],
-    extras_require={'dev': ['black']},
+    extras_require={'dev': ['black', 'pylint==2.*,>=2.3.0']},
 )

@@ -2,17 +2,16 @@
 Collection of misc utility functions
 """
 
+import sys
 import re
 import snaptime
 import tzlocal
 import pandas as pd
 import colorama
-import sys
 from pygments import highlight as hl
-from pygments.lexers import XmlLexer
+from pygments.lexers import XmlLexer  # pylint: disable=no-name-in-module
 from pygments.lexers.data import JsonLexer
-from pygments.formatters import Terminal256Formatter
-import json
+from pygments.formatters import Terminal256Formatter  # pylint: disable=no-name-in-module
 
 import structlog
 
@@ -20,6 +19,8 @@ logger = structlog.getLogger(__name__)
 
 
 def color_init(color):
+    """Enable/Disable wrapping of sys.stdout with Colorama logic"""
+
     if color == "auto":
         colorama.init()
     elif color == "always":
@@ -75,6 +76,8 @@ def humanized_bytes(size, precision=2):
 
 
 def detect_encoding(unknown_file):
+    """Sniff a file's contents and try to detect the encoding used with chardet"""
+
     import chardet
 
     detector = chardet.UniversalDetector()

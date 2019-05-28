@@ -5,7 +5,6 @@ import sys
 import re
 from fnmatch import fnmatch
 from pathlib import Path
-import select
 from collections import defaultdict
 
 import click
@@ -258,15 +257,15 @@ def search(
     type=click.Choice(["read", "noread"]),
     help="Only list repos with or without read access",
 )
-def repo(base_url, token, color, filter):
+def repo(base_url, token, color, filter_):
     """List available repositories and views matching an optional filter."""
     utils.color_init(color)
 
     client = humiocore.HumioAPI(base_url=base_url, token=token)
     repositories = client.repositories()
 
-    def _boolemoji(x):
-        if x:
+    def _boolemoji(authorized):
+        if authorized:
             return f"{colorama.Fore.GREEN}✓{colorama.Style.RESET_ALL}"
         else:
             return f"{colorama.Fore.RED}✗{colorama.Style.RESET_ALL}"
@@ -275,9 +274,9 @@ def repo(base_url, token, color, filter):
     for repo, meta in sorted(repositories.items()):
         readable = meta.get("read_permission", False)
 
-        if filter == "read" and not readable:
+        if filter_ == "read" and not readable:
             continue
-        if filter == "noread" and readable:
+        if filter_ == "noread" and readable:
             continue
         colorprefix = colorama.Fore.GREEN if readable else colorama.Fore.RED
 
@@ -332,7 +331,7 @@ def repo(base_url, token, color, filter):
     envvar="HUMIO_SEPARATOR",
     default="^.",
     help="PATTERN indicating the start of a new event. Assumes single-line if not provided. "
-    "For example `^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}`",
+    "For example `^\\d{4}-\\d{2}-\\d{2}[T\\s]\\d{2}:\\d{2}:\\d{2}`",
 )
 @click.option(
     "--soft-limit",
@@ -390,7 +389,10 @@ def ingest(base_url, ingest_token, encoding, separator, soft_limit, dry, fields,
 
         with open(ingestfile, "r", encoding=encoding) as ingest_io:
             client.ingest_unstructured(
-                utils.readevents_split(ingest_io, sep=separator), fields=fields, dry=dry
+                utils.readevents_split(ingest_io, sep=separator),
+                fields=fields,
+                soft_limit=soft_limit,
+                dry=dry,
             )
 
 
