@@ -68,6 +68,9 @@ def wrap_time(timestamp, offset):
 
 
 def humanized_bytes(size, precision=2):
+    """
+    Returns a humanized storage size string from bytes
+    """
     for unit in ["", "KB", "MB", "GB", "TB"]:
         if size < 1000.0:
             break

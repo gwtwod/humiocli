@@ -40,7 +40,6 @@ def cli():
     `HUMIO_<OPTION>=<VALUE>`. If a .env file exists at `~/.config/humio/.env` it will be
     automatically sourced on execution without overwriting the existing environment.
     """
-    pass
 
 
 @cli.command()
