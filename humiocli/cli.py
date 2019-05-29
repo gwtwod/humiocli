@@ -24,11 +24,19 @@ humiocore.loadenv()
 logger = structlog.getLogger(__name__)
 # Restore original stdout after Colorama rudely overwrites it through Structlog
 sys.stdout = sys.__stdout__
-humiocore.setup_excellent_logging("INFO")
 
 
 @click.group(cls=DefaultGroup, default="search", default_if_no_args=True)
-def cli():
+@click.option(
+    "-v",
+    "verbosity",
+    envvar="HUMIO_VERBOSITY",
+    count=True,
+    default=1,
+    show_default=True,
+    help="Set verbosity for internal logging messages, repeatable",
+)
+def cli(verbosity):
     """
     Humio CLI for working with the humio API. Defaults to the search command.
 
@@ -40,6 +48,7 @@ def cli():
     `HUMIO_<OPTION>=<VALUE>`. If a .env file exists at `~/.config/humio/.env` it will be
     automatically sourced on execution without overwriting the existing environment.
     """
+    humiocore.setup_excellent_logging(verbosity)
 
 
 @cli.command()

@@ -122,7 +122,7 @@ description = ""
 name = "humiocore"
 optional = false
 python-versions = "^3.6"
-version = "0.1.7"
+version = "0.1.8"
 
 [package.dependencies]
 aiohttp = "^3.5"
@@ -138,7 +138,7 @@ structlog-pretty = "^0.1.1"
 tzlocal = "^1.5"
 
 [package.source]
-reference = "aeebb2fd2a00f0a69d35ae6da2bd8ff047217cce"
+reference = "1fb3094349a878861ccfe1184e314e780f145d4e"
 type = "git"
 url = "https://github.com/gwtwod/py3humiocore.git"
 [[package]]
@@ -425,7 +425,7 @@ idna = ">=2.0"
 multidict = ">=4.0"
 
 [metadata]
-content-hash = "dadcef0f3d6f4e50c52d8227c62c4849af18f4c9d8835f54cac4a4ef13ff3cfa"
+content-hash = "c0f4b949f65f4fb2e2d988932d8e74c4e69edd277ae9f8dd0e04ef5fba211c44"
 python-versions = "^3.6"
 
 [metadata.hashes]
