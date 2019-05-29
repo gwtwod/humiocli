@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "humiocli"
-version = "0.1.5"
+version = "0.1.6"
 description = "Command line interface for interacting with Humio API using the humiocore library"
 authors = ["Jostein Haukeli"]
 repository = "https://github.com/gwtwod/py3humiocli"
@@ -23,7 +23,7 @@ click = "^7.0"
 click-default-group = "^1.2"
 tabulate = "^0.8.3"
 chardet = "^3.0"
-humiocore = {git = "https://github.com/gwtwod/py3humiocore.git", rev = "504082e42b91c726e1fd6ea2bca0911d1f6df956"}
+humiocore = {git = "https://github.com/gwtwod/py3humiocore.git", rev = "f27b57a9bc2e8c405e668bf09b3c5843f43ba5e3"}
 
 [tool.poetry.dev-dependencies]
 black = { version = "*", allows-prereleases = true }
@@ -54,4 +54,3 @@ exclude = '''
 [build-system]
 requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
-

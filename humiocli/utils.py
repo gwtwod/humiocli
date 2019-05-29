@@ -2,18 +2,18 @@
 Collection of misc utility functions
 """
 
-import sys
 import re
-import snaptime
-import tzlocal
-import pandas as pd
+import sys
+
 import colorama
+import pandas as pd
+import snaptime
+import structlog
+import tzlocal
 from pygments import highlight as hl
+from pygments.formatters import Terminal256Formatter  # pylint: disable=no-name-in-module
 from pygments.lexers import XmlLexer  # pylint: disable=no-name-in-module
 from pygments.lexers.data import JsonLexer
-from pygments.formatters import Terminal256Formatter  # pylint: disable=no-name-in-module
-
-import structlog
 
 logger = structlog.getLogger(__name__)
 

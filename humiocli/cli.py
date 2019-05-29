@@ -2,23 +2,21 @@
 
 import json
 import sys
-import re
+from collections import defaultdict
 from fnmatch import fnmatch
 from pathlib import Path
-from collections import defaultdict
 
 import click
 import colorama
-from tabulate import tabulate
-import pendulum
-from pygments.styles import get_all_styles
-
-import structlog
-from click_default_group import DefaultGroup
-
 import humiocore
-from . import prettyxml
-from . import utils
+import pendulum
+import structlog
+import tzlocal
+from click_default_group import DefaultGroup
+from pygments.styles import get_all_styles
+from tabulate import tabulate
+
+from . import prettyxml, utils
 
 # Make environment variables available
 humiocore.loadenv()
@@ -60,6 +58,7 @@ def cli():
 )
 @click.option(
     "--repo",
+    "repo_",
     envvar="HUMIO_REPO",
     multiple=True,
     default=["sandbox"],
@@ -150,7 +149,7 @@ def cli():
 )
 @click.argument("query", envvar="HUMIO_QUERY")
 def search(
-    base_url, token, repo, start, end, color, style, outformat, sort, asyncronous, fields, query
+    base_url, token, repo_, start, end, color, style, outformat, sort, asyncronous, fields, query
 ):
     """
     Execute a Humio-search in the provided time range.
@@ -177,7 +176,7 @@ def search(
     client = humiocore.HumioAPI(base_url=base_url, token=token)
 
     matches = lambda x: any(
-        [fnmatch(x, pattern) for pattern in repo]  # pylint: disable=not-an-iterable
+        [fnmatch(x, pattern) for pattern in repo_]  # pylint: disable=not-an-iterable
     )
     target_repos = set(
         [
@@ -252,6 +251,7 @@ def search(
 )
 @click.option(
     "--filter",
+    "filter_",
     envvar="HUMIO_FILTER",
     required=False,
     type=click.Choice(["read", "noread"]),
@@ -271,7 +271,7 @@ def repo(base_url, token, color, filter_):
             return f"{colorama.Fore.RED}✗{colorama.Style.RESET_ALL}"
 
     output = []
-    for repo, meta in sorted(repositories.items()):
+    for reponame, meta in sorted(repositories.items()):
         readable = meta.get("read_permission", False)
 
         if filter_ == "read" and not readable:
@@ -281,17 +281,14 @@ def repo(base_url, token, color, filter_):
         colorprefix = colorama.Fore.GREEN if readable else colorama.Fore.RED
 
         try:
-            last_ingest = meta.get("last_ingest").tz_convert("Europe/Oslo")
+            last_ingest = meta.get("last_ingest").tz_convert(tzlocal.get_localzone())
             last_ingest = pendulum.parse(str(last_ingest))
             last_ingest = pendulum.now().diff_for_humans(last_ingest, True) + " ago"
         except (TypeError, AttributeError):
             last_ingest = colorama.Fore.RED + "no events" + colorama.Style.RESET_ALL
 
         data = {
-            "Repository name": colorprefix + repo + colorama.Style.RESET_ALL,
-            "User roles": ", ".join(
-                re.findall("CN=(Role-Humio-U-[^,]+)", "".join(meta.get("roles", "")))
-            ),
+            "Repository name": colorprefix + reponame + colorama.Style.RESET_ALL,
             "Last ingest": last_ingest,
             "Real size": utils.humanized_bytes(meta.get("uncompressed_bytes")),
             "Read": _boolemoji(meta.get("read_permission")),
@@ -411,6 +408,7 @@ def ingest(base_url, ingest_token, encoding, separator, soft_limit, dry, fields,
 )
 @click.option(
     "--repo",
+    "repo_",
     envvar="HUMIO_REPO",
     multiple=True,
     default=["sandbox"],
@@ -425,7 +423,7 @@ def ingest(base_url, ingest_token, encoding, separator, soft_limit, dry, fields,
     help="Encoding to use when reading the provided files. Autodetected if not provided",
 )
 @click.argument("parser", nargs=1, type=click.Path(exists=True))
-def makeparser(base_url, token, repo, encoding, parser):
+def makeparser(base_url, token, repo_, encoding, parser):
     """
     Takes a parser file and creates or updates a parser with the same name as the file
     in the requested repository (or repositories).
@@ -436,7 +434,7 @@ def makeparser(base_url, token, repo, encoding, parser):
     client = humiocore.HumioAPI(base_url=base_url, token=token)
 
     matches = lambda x: any(
-        [fnmatch(x, pattern) for pattern in repo]  # pylint: disable=not-an-iterable
+        [fnmatch(x, pattern) for pattern in repo_]  # pylint: disable=not-an-iterable
     )
     target_repos = set(
         [reponame for reponame, meta in client.repositories().items() if matches(reponame)]
