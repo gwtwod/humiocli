@@ -38,7 +38,7 @@ setup(
         'tzlocal==1.*,>=1.5.0'
     ],
     dependency_links=[
-        'git+https://github.com/gwtwod/py3humiocore.git@3954b9098f046e7db51fd6426061f2985d6d5f17#egg=humiocore'
+        'git+https://github.com/gwtwod/py3humiocore.git@2d15ec407d94810b2bb3cdff8e16ba06c1ba2edf#egg=humiocore'
     ],
     extras_require={'dev': ['black', 'pylint==2.*,>=2.3.0']},
 )

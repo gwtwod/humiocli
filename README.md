@@ -63,7 +63,7 @@ hc ingest customjson
 ### Ingest a multi-line file with a user provided record separator (markdown headers) and parser
 
 ```bash
-hc ingest README.md --separator '^#' --fields '{"repo":"sandbox", "type":"markdown"}'
+hc ingest README.md --separator '^#' --fields '{"#repo":"sandbox", "#type":"markdown", "@host":"localhost"}'
 ```
 
 ## Self-contained distribution

@@ -8,13 +8,14 @@ from pathlib import Path
 
 import click
 import colorama
-import humiocore
 import pendulum
 import structlog
 import tzlocal
 from click_default_group import DefaultGroup
 from pygments.styles import get_all_styles
 from tabulate import tabulate
+
+import humiocore
 
 from . import prettyxml, utils
 
@@ -365,7 +366,7 @@ def ingest(base_url, ingest_token, encoding, separator, soft_limit, dry, fields,
     Ingests events from files with the provided event separator and ingest token.
 
     If the ingest token is not associated with a parser, a JSON object with the type
-    field must minimally be included, for example: {"type":"parsername"}
+    field must minimally be included, for example: {"#type":"parsername", "@host":"server01"}.
 
     If no encoding is provided chardet will be used to find an appropriate encoding.
     """
@@ -467,4 +468,4 @@ def makeparser(base_url, token, repo_, encoding, parser):
 
 
 if __name__ == "__main__":
-    cli()
+    cli(verbosity=1)
