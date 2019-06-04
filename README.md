@@ -1,17 +1,21 @@
 # Do things with the Humio API
 
-    Usage: hc COMMAND [OPTIONS] [ARGS]...
+```text
+Usage: hc [-v] COMMAND [OPTIONS] [ARGS]...
+```
 
-  Humio CLI for working with the humio API. Defaults to the search command.
+Humio CLI for working with the humio API. Defaults to the search command.
 
-  For detailed help about each command try:
+For detailed help about each command try:
 
-    hc <command> --help
+```text
+hc <command> --help
+```
 
-  All options may be provided by environment variables on the format
-  `HUMIO_<OPTION>=<VALUE>`. If a .env file exists in `~/.config/humio/.env` it
-  will be automatically sourced on execution without overwriting the
-  existing environment.
+All options may be provided by environment variables on the format
+`HUMIO_<OPTION>=<VALUE>`. If a .env file exists in `~/.config/humio/.env` it
+will be automatically sourced on execution without overwriting the
+existing environment.
 
 ## Examples
 
@@ -19,6 +23,30 @@
 
 ```bash
 hc --repo reponame* '#type=accesslog statuscode>=400'
+```
+
+### Execute a search using results with fields from another search
+
+```bash
+hc --repo=auth '#type=audit username1 | select([session_id, app_name])' --outformat=or-fields | jq '.'
+```
+
+This results in a JSON-structure with search strings generated from all field-value combinations for each field. The special field `SUBSEARCH` combines all search strings for all fields.
+
+Example output:
+
+```text
+{
+  "session_id": "\"session_id\"=\"5CF4A111\" or \"session_id\"=\"14C8BCEA\"",
+  "app_name": "\"app_name\"=\"frontend\"",
+  "SUBSEARCH": "(\"session_id\"=\"5CF4A111\" or \"session_id\"=\"14C8BCEA\") and (\"app_name\"=\"frontend\")"
+}
+```
+
+This can then be used in a new search:
+
+```bash
+hc --repo=auth '#type=audit username1 | select([session_id, app_name])' --outformat=or-fields | hc --repo=frontend '#type=accesslog {SUBSEARCH}'
 ```
 
 ### Output aggregated results as ND-JSON events
