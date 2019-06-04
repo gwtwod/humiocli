@@ -2,6 +2,7 @@
 
 import json
 import sys
+import string
 from collections import defaultdict
 from fnmatch import fnmatch
 from pathlib import Path
@@ -34,8 +35,7 @@ sys.stdout = sys.__stdout__
     envvar="HUMIO_VERBOSITY",
     count=True,
     default=1,
-    show_default=True,
-    help="Set verbosity for internal logging messages, repeatable",
+    help="Set logging level, repeat to increase verbosity",
 )
 def cli(verbosity):
     """
@@ -71,32 +71,32 @@ def cli(verbosity):
     envvar="HUMIO_REPO",
     multiple=True,
     default=["sandbox"],
-    help="Name of repository or view, supports wildcards and multiple options",
     show_default=True,
+    help="Name of repository or view, supports wildcards and multiple options",
 )
 @click.option(
     "--start",
     envvar="HUMIO_START",
     default="@d",
+    show_default=True,
     metavar="SNAPTIME/TIMESTRING",
     help="Begin search at this snaptime or common timestring",
-    show_default=True,
 )
 @click.option(
     "--end",
     envvar="HUMIO_END",
     default="now",
+    show_default=True,
     metavar="SNAPTIME/TIMESTRING",
     help="End search at this snaptime or common timestring",
-    show_default=True,
 )
 @click.option(
     "--color",
     envvar="HUMIO_COLOR",
     default="auto",
     type=click.Choice(["auto", "always", "never"]),
-    help="Colorize logging and known @rawstring formats",
     show_default=True,
+    help="Colorize logging and known @rawstring formats",
 )
 @click.option(
     "--style",
@@ -117,8 +117,8 @@ def cli(verbosity):
             )
         )
     ),
-    help="Pygments style to use when syntax-highlighting",
     show_default=True,
+    help="Pygments style to use when syntax-highlighting",
 )
 @click.option(
     "--outformat",
@@ -134,34 +134,37 @@ def cli(verbosity):
     "--sort",
     envvar="HUMIO_SORT",
     default="@timestamp",
+    show_default=True,
     metavar="FIELDNAME/<EMPTY>",
     help="Field to sort results by, pass the empty string to disable",
-    show_default=True,
 )
 @click.option(
     "--asyncronous/--syncronous",
     envvar="HUMIO_ASYNCRONOUS",
     default=True,
+    show_default=True,
     help="Run searches asyncronously or syncronously. Syncronous searches are streaming and will "
     "allow results that do not fit in memory if sorting is disabled (--sort='')",
-    show_default=True,
 )
 @click.option(
     "--fields",
     envvar="HUMIO_FIELDS",
     required=False,
-    default="{}",
     metavar="JSON",
-    help="Optional fields to inject into the query using the Python formatting mini-language "
+    help="Optional fields to inject into the QUERY using the Python formatting mini-language "
     "wherever a formatting token {field} occurs. Input must be provided as JSON document. "
-    "If a `-` (dash) is given, wait for and parse a single line from STDIN as JSON.",
+    "Using this option will disable waiting for fields from STDIN when the QUERY contains "
+    "formatting tokens.",
 )
 @click.argument("query", envvar="HUMIO_QUERY")
 def search(
     base_url, token, repo_, start, end, color, style, outformat, sort, asyncronous, fields, query
 ):
     """
-    Execute a Humio-search in the provided time range.
+    Execute a QUERY against the Humio API in the provided time range. QUERY may contain optional
+    tokens to inject data into the string using the Python formatting mini-language wherever a
+    {field} occurs. These must either be provided as one line of JSON data to STDIN or through the
+    --fields option.
 
     Time may be a valid snaptime-identifier (-60m@m) or a common timestamp
     such as ISO8859. Timestamps may be partial. 10:00 means today at 10:00.
@@ -175,25 +178,31 @@ def search(
     start = utils.parse_ts(start)
     end = utils.parse_ts(end)
 
-    # Load and interpolate any passed fields into the query string
-    if fields == "-":
-        fields = json.loads(click.get_text_stream("stdin").readline())
-    else:
-        fields = json.loads(fields)
+    # Load and interpolate any passed fields into the query string, if any
+    tokens = [token[1] for token in string.Formatter().parse(query) if token[1] is not None]
+    fields = {}
+    if tokens:
+        if fields:
+            fields = json.loads(fields)
+        else:
+            logger.debug(
+                "Expecting one line of JSON-data from STDIN before proceeding", tokens=tokens
+            )
+            fields = json.loads(click.get_text_stream("stdin").readline())
+
     query = query.format(**fields)
+    logger.info("Prepared query", query=query, repo=repo_, fields=json.dumps(fields))
 
     client = humiocore.HumioAPI(base_url=base_url, token=token)
 
     matches = lambda x: any(
         [fnmatch(x, pattern) for pattern in repo_]  # pylint: disable=not-an-iterable
     )
-    target_repos = set(
-        [
-            reponame
-            for reponame, meta in client.repositories().items()
-            if meta.get("read_permission") and matches(reponame)
-        ]
-    )
+    target_repos = {
+        reponame
+        for reponame, meta in client.repositories().items()
+        if meta.get("read_permission") and matches(reponame)
+    }
 
     if asyncronous:
         events = client.async_search(query, target_repos, start, end)
@@ -273,11 +282,10 @@ def repo(base_url, token, color, filter_):
     client = humiocore.HumioAPI(base_url=base_url, token=token)
     repositories = client.repositories()
 
-    def _boolemoji(authorized):
+    def _emojify(authorized):
         if authorized:
             return f"{colorama.Fore.GREEN}✓{colorama.Style.RESET_ALL}"
-        else:
-            return f"{colorama.Fore.RED}✗{colorama.Style.RESET_ALL}"
+        return f"{colorama.Fore.RED}✗{colorama.Style.RESET_ALL}"
 
     output = []
     for reponame, meta in sorted(repositories.items()):
@@ -300,13 +308,13 @@ def repo(base_url, token, color, filter_):
             "Repository name": colorprefix + reponame + colorama.Style.RESET_ALL,
             "Last ingest": last_ingest,
             "Real size": utils.humanized_bytes(meta.get("uncompressed_bytes")),
-            "Read": _boolemoji(meta.get("read_permission")),
-            "Write": _boolemoji(meta.get("write_permission")),
-            "Parsers": _boolemoji(meta.get("parseradmin_permission")),
-            "Alerts": _boolemoji(meta.get("alertadmin_permission")),
-            "Dashboards": _boolemoji(meta.get("parseradmin_permission")),
-            "Queries": _boolemoji(meta.get("parseradmin_permission")),
-            "Files": _boolemoji(meta.get("parseradmin_permission")),
+            "Read": _emojify(meta.get("read_permission")),
+            "Write": _emojify(meta.get("write_permission")),
+            "Parsers": _emojify(meta.get("parseradmin_permission")),
+            "Alerts": _emojify(meta.get("alertadmin_permission")),
+            "Dashboards": _emojify(meta.get("parseradmin_permission")),
+            "Queries": _emojify(meta.get("parseradmin_permission")),
+            "Files": _emojify(meta.get("parseradmin_permission")),
         }
         output.append(data)
 

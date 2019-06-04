@@ -66,17 +66,32 @@ hc ingest customjson
 hc ingest README.md --separator '^#' --fields '{"#repo":"sandbox", "#type":"markdown", "@host":"localhost"}'
 ```
 
+## Development
+
+To install the cli and core packages in editable mode:
+
+```bash
+git clone https://github.com/gwtwod/py3humiocore.git
+git clone https://github.com/gwtwod/py3humiocli.git
+# order matters if you want to be able to edit humiocore as well
+pip install -e py3humiocore
+pip install -e py3humiocli
+```
+
 ## Self-contained distribution
 
 > _The runtime interpreter must be specified if the system interpreter is incompatible, for example on RHEL7_
 
 With Shiv:
 
-    git clone https://github.com/gwtwod/py3humiocli.git
-    shiv -c hc -o hc py3humiocli/ -p /opt/rh/rh-python36/root/bin/python3.6
+```bash
+git clone https://github.com/gwtwod/py3humiocli.git
+shiv -c hc -o hc py3humiocli/ -p /opt/rh/rh-python36/root/bin/python3.6
+```
 
 With Pex:
 
-    git clone https://github.com/gwtwod/py3humiocli.git
-    git clone https://github.com/gwtwod/py3humiocore.git
-    pex --disable-cache -c hc -o hc py3humiocli py3humiocore --python-shebang=/opt/rh/rh-python36/root/bin/python3.6
+```bash
+git clone https://github.com/gwtwod/py3humiocli.git
+git clone https://github.com/gwtwod/py3humiocore.git
+pex --disable-cache -c hc -o hc py3humiocli py3humiocore --python-shebang=/opt/rh/rh-python36/root/bin/python3.6
