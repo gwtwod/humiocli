@@ -2,7 +2,8 @@
 
 import json
 import sys
-import string
+import re
+from string import Template
 from collections import defaultdict
 from fnmatch import fnmatch
 from pathlib import Path
@@ -151,10 +152,9 @@ def cli(verbosity):
     envvar="HUMIO_FIELDS",
     required=False,
     metavar="JSON",
-    help="Optional fields to inject into the QUERY using the Python formatting mini-language "
-    "wherever a formatting token {field} occurs. Input must be provided as JSON document. "
-    "Using this option will disable waiting for fields from STDIN when the QUERY contains "
-    "formatting tokens.",
+    help="Optional fields to inject into the QUERY where wherever a token $field or ${field} "
+    "occurs. Input must be provided as JSON document. Using this option will disable waiting for "
+    "fields from STDIN when the QUERY contains tokens.",
 )
 @click.argument("query", envvar="HUMIO_QUERY")
 def search(
@@ -162,9 +162,8 @@ def search(
 ):
     """
     Execute a QUERY against the Humio API in the provided time range. QUERY may contain optional
-    tokens to inject data into the string using the Python formatting mini-language wherever a
-    {field} occurs. These must either be provided as one line of JSON data to STDIN or through the
-    --fields option.
+    tokens to inject provided fields into the query where `$field` or `${field}` occurs. These
+    fields must be provided as one line of JSON data to STDIN or through the --fields option.
 
     Time may be a valid snaptime-identifier (-60m@m) or a common timestamp
     such as ISO8859. Timestamps may be partial. 10:00 means today at 10:00.
@@ -179,18 +178,24 @@ def search(
     end = utils.parse_ts(end)
 
     # Load and interpolate any passed fields into the query string, if any
-    tokens = [token[1] for token in string.Formatter().parse(query) if token[1] is not None]
-    fields = {}
+    tokens = re.findall(r"\$(?:[#@\.\w][\.\w-]*|\{[#@\.\w][\.\w-]*\})", query)
     if tokens:
+        logger.debug("Query contains valid tokens, loading provided JSON fields", tokens=tokens)
         if fields:
+            logger.debug("JSON-data read from --fields", json=fields)
             fields = json.loads(fields)
         else:
-            logger.debug(
-                "Expecting one line of JSON-data from STDIN before proceeding", tokens=tokens
-            )
-            fields = json.loads(click.get_text_stream("stdin").readline())
+            logger.debug("Expecting one line of JSON-data from STDIN before proceeding")
+            in_stream = click.get_text_stream("stdin").readline()
+            logger.debug("JSON-data read from STDIN", json=in_stream)
+            fields = json.loads(in_stream)
+    else:
+        fields = {}
 
-    query = query.format(**fields)
+    class FieldsTemplate(Template):
+        idpattern = r"[#@\.\w][\.\w-]*"
+
+    query = FieldsTemplate(query).safe_substitute(**fields)
     logger.info("Prepared query", query=query, repo=repo_, fields=json.dumps(fields))
 
     client = humiocore.HumioAPI(base_url=base_url, token=token)

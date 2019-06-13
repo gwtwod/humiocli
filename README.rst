@@ -52,7 +52,7 @@ This can then be used in a new search:
 
 .. code-block:: bash
 
-   hc --repo=auth '#type=audit username1 | select([session_id, app_name])' --outformat=or-fields | hc --repo=frontend '#type=accesslog {SUBSEARCH}'
+   hc --repo=auth '#type=audit username1 | select([session_id, app_name])' --outformat=or-fields | hc --repo=frontend '#type=accesslog ${SUBSEARCH}'
 
 Output aggregated results as ND-JSON events
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
