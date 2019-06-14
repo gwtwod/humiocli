@@ -152,9 +152,9 @@ def cli(verbosity):
     envvar="HUMIO_FIELDS",
     required=False,
     metavar="JSON",
-    help="Optional fields to inject into the QUERY where wherever a token $field or ${field} "
-    "occurs. Input must be provided as JSON document. Using this option will disable waiting for "
-    "fields from STDIN when the QUERY contains tokens.",
+    help="Optional fields to inject into the QUERY where wherever a token {{field}} occurs. "
+    "Input must be provided as JSON document. Using this option will disable waiting for fields "
+    "from STDIN when the QUERY contains tokens.",
 )
 @click.argument("query", envvar="HUMIO_QUERY")
 def search(
@@ -162,8 +162,8 @@ def search(
 ):
     """
     Execute a QUERY against the Humio API in the provided time range. QUERY may contain optional
-    tokens to inject provided fields into the query where `$field` or `${field}` occurs. These
-    fields must be provided as one line of JSON data to STDIN or through the --fields option.
+    tokens to inject provided fields into the query wherever `{{field}}` occurs. These fields must
+    be provided as one line of JSON data to STDIN or through the --fields option.
 
     Time may be a valid snaptime-identifier (-60m@m) or a common timestamp
     such as ISO8859. Timestamps may be partial. 10:00 means today at 10:00.
@@ -177,8 +177,9 @@ def search(
     start = utils.parse_ts(start)
     end = utils.parse_ts(end)
 
-    # Load and interpolate any passed fields into the query string, if any
-    tokens = re.findall(r"\$(?:[#@\.\w][\.\w-]*|\{[#@\.\w][\.\w-]*\})", query)
+    # Check for tokens in the query string and load fields if necessary
+    token_pattern = re.compile(r"\{\{ *(?P<token>[@#._]?[\w.-]+) *\}\}")
+    tokens = token_pattern.findall(query)
     if tokens:
         logger.debug("Query contains valid tokens, loading provided JSON fields", tokens=tokens)
         if fields:
@@ -192,10 +193,12 @@ def search(
     else:
         fields = {}
 
-    class FieldsTemplate(Template):
-        idpattern = r"[#@\.\w][\.\w-]*"
+    def token_sub(matchobj):
+        if matchobj.group(1) in fields:
+            return fields.get(matchobj.group(1))
+        return matchobj.group(0)
 
-    query = FieldsTemplate(query).safe_substitute(**fields)
+    query = token_pattern.sub(token_sub, query)
     logger.info("Prepared query", query=query, repo=repo_, fields=json.dumps(fields))
 
     client = humiocore.HumioAPI(base_url=base_url, token=token)
