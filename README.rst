@@ -2,17 +2,17 @@
 Do things with the Humio API
 ============================
 
-.. code-block:: text
+First time setup
+----------------
 
-   Usage: hc [-v] COMMAND [OPTIONS] [ARGS]...
+Start the guided setup wizard to configure your environment
 
-Humio CLI for working with the humio API. Defaults to the search command.
+.. code-block::
 
-For detailed help about each command try:
+   hc wizard
 
-.. code-block:: text
 
-   hc <command> --help
+This will help you create an environment file with a default Humio URL and token, so you don't have to explicitly provide them as options later.
 
 All options may be provided by environment variables on the format
 ``HUMIO_<OPTION>=<VALUE>``. If a .env file exists in ``~/.config/humio/.env`` it
@@ -27,14 +27,14 @@ Execute a search in all repos starting with ``reponame`` and output ``@rawstring
 
 .. code-block:: bash
 
-   hc --repo reponame* '#type=accesslog statuscode>=400'
+   hc search --repo reponame* '#type=accesslog statuscode>=400'
 
 Execute a search using results with fields from another search
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: bash
 
-   hc --repo=auth '#type=audit username1 | select([session_id, app_name])' --outformat=or-fields | jq '.'
+   hc search --repo=auth '#type=audit username1 | select([session_id, app_name])' --outformat=or-fields | jq '.'
 
 This results in a JSON-structure with search strings generated from all field-value combinations for each field. The special field ``SUBSEARCH`` combines all search strings for all fields.
 
@@ -52,7 +52,7 @@ This can then be used in a new search:
 
 .. code-block:: bash
 
-   hc --repo=auth '#type=audit username1 | select([session_id, app_name])' --outformat=or-fields | hc --repo=frontend '#type=accesslog {{SUBSEARCH}}'
+   hc search --repo=auth '#type=audit username1 | select([session_id, app_name])' --outformat=or-fields | hc --repo=frontend '#type=accesslog {{SUBSEARCH}}'
 
 Output aggregated results as ND-JSON events
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -66,13 +66,13 @@ Simple example:
 
 .. code-block:: bash
 
-   hc --repo sandbox* --start=-60m@m --end=@m "#type=accesslog | timechart(span=1m, series=statuscode)"
+   hc search --repo sandbox* --start=-60m@m --end=@m "#type=accesslog | timechart(span=1m, series=statuscode)"
 
 Or with a long multiline search
 
 .. code-block:: bash
 
-   hc --repo sandbox* --start -60m@m --end=@m  "$(cat << EOF
+   hc search --repo sandbox* --start -60m@m --end=@m  "$(cat << EOF
    #type=accesslog
    | case {
        statuscode<=400 | status_ok := 1 ;

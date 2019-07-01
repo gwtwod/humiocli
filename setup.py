@@ -21,7 +21,7 @@ if os.path.exists(readme_path):
 setup(
     long_description=readme,
     name='humiocli',
-    version='0.2.2',
+    version='0.2.3',
     description='Command line interface for interacting with Humio API using the humiocore library',
     python_requires='==3.*,>=3.6.0',
     project_urls={'repository': 'https://github.com/gwtwod/py3humiocli'},
@@ -30,12 +30,11 @@ setup(
     packages=['humiocli'],
     package_data={},
     install_requires=[
-        'chardet==3.*,>=3.0.0', 'click==7.*,>=7.0.0',
-        'click-default-group==1.*,>=1.2.0', 'humiocore', 'pandas==0.*,>=0.24.1',
-        'pendulum==2.*,>=2.0.0', 'pygments==2.*,>=2.3.0',
-        'pytz==2018.*,>=2018.9.0', 'snaptime==0.*,>=0.2.4',
-        'structlog==19.*,>=19.1.0', 'tabulate==0.*,>=0.8.3',
-        'tzlocal==1.*,>=1.5.0'
+        'chardet==3.*,>=3.0.0', 'click==7.*,>=7.0.0', 'humiocore',
+        'pandas==0.*,>=0.24.1', 'pendulum==2.*,>=2.0.0',
+        'pygments==2.*,>=2.3.0', 'pytz==2018.*,>=2018.9.0',
+        'snaptime==0.*,>=0.2.4', 'structlog==19.*,>=19.1.0',
+        'tabulate==0.*,>=0.8.3', 'tzlocal==1.*,>=1.5.0'
     ],
     dependency_links=[
         'git+https://github.com/gwtwod/py3humiocore.git@a1f614c02b2b9494754e59e3bf89e60de74c2fe2#egg=humiocore'

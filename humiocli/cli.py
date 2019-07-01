@@ -2,6 +2,7 @@
 
 import json
 import sys
+import os
 import re
 from collections import defaultdict
 from fnmatch import fnmatch
@@ -12,7 +13,6 @@ import colorama
 import pendulum
 import structlog
 import tzlocal
-from click_default_group import DefaultGroup
 from pygments.styles import get_all_styles
 from tabulate import tabulate
 
@@ -28,7 +28,24 @@ logger = structlog.getLogger(__name__)
 sys.stdout = sys.__stdout__
 
 
-@click.group(cls=DefaultGroup, default="search", default_if_no_args=True)
+class AliasedGroup(click.Group):
+    """Helper class for expanding partial command names to matching commands"""
+
+    def get_command(self, ctx, cmd_name):
+
+        rv = click.Group.get_command(self, ctx, cmd_name)
+        if rv is not None:
+            return rv
+
+        matches = [x for x in self.list_commands(ctx) if x.startswith(cmd_name)]
+        if not matches:
+            return None
+        elif len(matches) == 1:
+            return click.Group.get_command(self, ctx, matches[0])
+        ctx.fail("Too many matches: %s" % ", ".join(sorted(matches)))
+
+
+@click.group(cls=AliasedGroup)
 @click.option(
     "-v",
     "verbosity",
@@ -39,11 +56,11 @@ sys.stdout = sys.__stdout__
 )
 def cli(verbosity):
     """
-    Humio CLI for working with the humio API. Defaults to the search command.
+    Humio CLI for working with the Humio API.
 
     For detailed help about each command try:
 
-        hc <command> --help
+        hc COMMAND --help
 
     All options may be provided by environment variables on the format
     `HUMIO_<OPTION>=<VALUE>`. If a .env file exists at `~/.config/humio/.env` it will be
@@ -418,7 +435,7 @@ def ingest(base_url, ingest_token, encoding, separator, soft_limit, dry, fields,
             )
 
     if not ingestfiles:
-        with click.open_file('-', 'r') as ingest_stdin:
+        with click.open_file("-", "r") as ingest_stdin:
             client.ingest_unstructured(
                 utils.readevents_split(ingest_stdin, sep=separator),
                 fields=fields,
@@ -490,6 +507,53 @@ def makeparser(base_url, token, repo_, encoding, parser):
     with open(parser, "r", encoding=encoding) as parser_io:
         source = parser_io.read()
         client.create_update_parser(repos=target_repos, parser=Path(parser).stem, source=source)
+
+
+@cli.command()
+def wizard():
+    """
+    Start a guided setup process to create/update the configuration file
+    """
+
+    env_file = Path.home() / ".config/humio/.env"
+    env = humiocore.loadenv(env=env_file)
+
+    message = click.style("You're about to update your configuration file at", fg="green")
+    message += f" {env_file}\n"
+    click.echo(message=message)
+
+    env["base_url"] = click.prompt(
+        click.style("Enter the base URL for your Humio install", fg="green"),
+        default=env.get("base_url"),
+        type=str,
+    )
+    env["token"] = click.prompt(
+        click.style("Enter your personal Humio token", fg="green"),
+        default=env.get("token"),
+        type=str,
+    )
+    env["start"] = click.prompt(
+        click.style("Enter your preferred default search start time", fg="green"),
+        default=env.get("start", "-2d@d"),
+        type=str,
+    )
+    env["end"] = click.prompt(
+        click.style("Enter your preferred default search end time", fg="green"),
+        default=env.get("end", "@s"),
+        type=str,
+    )
+    unmanaged = set(env.keys()) - set(["base_url", "token", "start", "end"])
+    if unmanaged:
+        click.echo(
+            click.style(
+                f"\nThe following keys are left unmodified: {', '.join(unmanaged)}", fg="yellow"
+            )
+        )
+
+    os.makedirs(Path.home() / ".config/humio", exist_ok=True)
+    with open(env_file, "w+") as config_io:
+        for key, value in env.items():
+            config_io.write(f"HUMIO_{key.upper()}={value}\n")
 
 
 if __name__ == "__main__":
