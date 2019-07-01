@@ -3,7 +3,6 @@
 import json
 import sys
 import re
-from string import Template
 from collections import defaultdict
 from fnmatch import fnmatch
 from pathlib import Path
@@ -379,7 +378,8 @@ def repo(base_url, token, color, filter_):
 @click.argument("ingestfiles", nargs=-1, type=click.Path(exists=True))
 def ingest(base_url, ingest_token, encoding, separator, soft_limit, dry, fields, ingestfiles):
     """
-    Ingests events from files with the provided event separator and ingest token.
+    Ingests events from files or STDIN with the provided event separator and ingest token. If no
+    ingestfiles are provided events are expected from STDIN.
 
     If the ingest token is not associated with a parser, a JSON object with the type
     field must minimally be included, for example: {"#type":"parsername", "@host":"server01"}.
@@ -412,6 +412,15 @@ def ingest(base_url, ingest_token, encoding, separator, soft_limit, dry, fields,
         with open(ingestfile, "r", encoding=encoding) as ingest_io:
             client.ingest_unstructured(
                 utils.readevents_split(ingest_io, sep=separator),
+                fields=fields,
+                soft_limit=soft_limit,
+                dry=dry,
+            )
+
+    if not ingestfiles:
+        with click.open_file('-', 'r') as ingest_stdin:
+            client.ingest_unstructured(
+                utils.readevents_split(ingest_stdin, sep=separator),
                 fields=fields,
                 soft_limit=soft_limit,
                 dry=dry,
