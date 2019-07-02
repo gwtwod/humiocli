@@ -73,19 +73,22 @@ def cli(verbosity):
 
 @cli.command(short_help="Search for data in Humio")
 @click.option(
-    "--base-url", "-b",
+    "--base-url",
+    "-b",
     envvar="HUMIO_BASE_URL",
     required=True,
     help="Humio base URL to connect to, for example https://cloud.humio.com",
 )
 @click.option(
-    "--token", "-t",
+    "--token",
+    "-t",
     envvar="HUMIO_TOKEN",
     required=True,
     help="Your *secret* API token found in your account settings",
 )
 @click.option(
-    "--repo", "-r",
+    "--repo",
+    "-r",
     "repo_",
     envvar="HUMIO_REPO",
     multiple=True,
@@ -94,7 +97,8 @@ def cli(verbosity):
     help="Name of repository or view, supports wildcards and multiple options",
 )
 @click.option(
-    "--start", "-s",
+    "--start",
+    "-s",
     envvar="HUMIO_START",
     default="@d",
     show_default=True,
@@ -102,7 +106,8 @@ def cli(verbosity):
     help="Begin search at this snaptime or common timestring",
 )
 @click.option(
-    "--end", "-e",
+    "--end",
+    "-e",
     envvar="HUMIO_END",
     default="now",
     show_default=True,
@@ -110,7 +115,8 @@ def cli(verbosity):
     help="End search at this snaptime or common timestring",
 )
 @click.option(
-    "--color", "-c",
+    "--color",
+    "-c",
     envvar="HUMIO_COLOR",
     default="auto",
     type=click.Choice(["auto", "always", "never"]),
@@ -118,7 +124,8 @@ def cli(verbosity):
     help="Colorize logging and known @rawstring formats",
 )
 @click.option(
-    "--outformat", "-o",
+    "--outformat",
+    "-o",
     envvar="HUMIO_OUTFORMAT",
     type=click.Choice(["pretty", "raw", "ndjson", "or-values", "or-fields"]),
     default="pretty",
@@ -128,7 +135,8 @@ def cli(verbosity):
     "in new searches, for example by piping to a new search with --fields read from stdin",
 )
 @click.option(
-    "--sort", "-S",
+    "--sort",
+    "-S",
     envvar="HUMIO_SORT",
     default="@timestamp",
     show_default=True,
@@ -136,7 +144,8 @@ def cli(verbosity):
     help="Field to sort results by, pass the empty string to disable",
 )
 @click.option(
-    "--fields", "-f",
+    "--fields",
+    "-f",
     envvar="HUMIO_FIELDS",
     required=False,
     metavar="JSON",
@@ -280,19 +289,22 @@ def search(
 
 @cli.command(short_help="List available repositories and views")
 @click.option(
-    "--base-url", "-b",
+    "--base-url",
+    "-b",
     envvar="HUMIO_BASE_URL",
     required=True,
     help="Humio base URL to connect to, for example https://cloud.humio.com",
 )
 @click.option(
-    "--token", "-t",
+    "--token",
+    "-t",
     envvar="HUMIO_TOKEN",
     required=True,
     help="Your *secret* API token found in your account settings",
 )
 @click.option(
-    "--color", "-c",
+    "--color",
+    "-c",
     envvar="HUMIO_COLOR",
     default="auto",
     type=click.Choice(["auto", "always", "never"]),
@@ -300,7 +312,8 @@ def search(
     show_default=True,
 )
 @click.option(
-    "--filter", "-f"
+    "--filter",
+    "-f",
     "filter_",
     envvar="HUMIO_FILTER",
     required=False,
@@ -355,39 +368,45 @@ def repo(base_url, token, color, filter_):
 
 @cli.command(short_help="Ingests events from files or STDIN into Humio")
 @click.option(
-    "--base-url", "-b",
+    "--base-url",
+    "-b",
     envvar="HUMIO_BASE_URL",
     required=True,
     help="Humio base URL to connect to, for example https://cloud.humio.com",
 )
 @click.option(
-    "--ingest-token", "-t",
+    "--ingest-token",
+    "-t",
     envvar="HUMIO_INGEST_TOKEN",
     required=True,
     help="Your *secret* ingest token found in your repository settings",
 )
 @click.option(
-    "--separator", "-s",
+    "--separator",
+    "-s",
     envvar="HUMIO_SEPARATOR",
     default="^.",
     help="PATTERN indicating the start of a new event. Assumes single-line if not provided. "
     "For example `^\\d{4}-\\d{2}-\\d{2}[T\\s]\\d{2}:\\d{2}:\\d{2}`",
 )
 @click.option(
-    "--fields", "-f",
+    "--fields",
+    "-f",
     envvar="HUMIO_FIELDS",
     required=False,
     default="{}",
     help="Optional fields to send with all events. Must be provided as a parseable JSON object",
 )
 @click.option(
-    "--encoding", "-e",
+    "--encoding",
+    "-e",
     envvar="HUMIO_ENCODING",
     required=False,
     help="Encoding to use when reading the provided files. Autodetected if not provided",
 )
 @click.option(
-    "--soft-limit", "-l",
+    "--soft-limit",
+    "-l",
     envvar="HUMIO_SOFT_LIMIT",
     default=2 ** 20,
     help="Soft limit for messages sent with each POST requests. Messages will throw a warning "
@@ -454,19 +473,22 @@ def ingest(base_url, ingest_token, separator, fields, encoding, soft_limit, dry,
 
 @cli.command(short_help="Upload a parser file to a repo")
 @click.option(
-    "--base-url", "-b",
+    "--base-url",
+    "-b",
     envvar="HUMIO_BASE_URL",
     required=True,
     help="Humio base URL to connect to, for example https://cloud.humio.com",
 )
 @click.option(
-    "--token", "-t",
+    "--token",
+    "-t",
     envvar="HUMIO_TOKEN",
     required=True,
     help="Your *secret* API token found in your account settings",
 )
 @click.option(
-    "--repo", "-r",
+    "--repo",
+    "-r",
     "repo_",
     envvar="HUMIO_REPO",
     multiple=True,
@@ -476,7 +498,8 @@ def ingest(base_url, ingest_token, separator, fields, encoding, soft_limit, dry,
     show_default=True,
 )
 @click.option(
-    "--encoding", "-e",
+    "--encoding",
+    "-e",
     envvar="HUMIO_ENCODING",
     required=False,
     help="Encoding to use when reading the provided files. Autodetected if not provided",
@@ -563,12 +586,17 @@ def wizard():
         for key, value in env.items():
             config_io.write(f"HUMIO_{key.upper()}={value}\n")
 
-    click.echo(click.style("You're all set, try", fg="green") + click.style(" hc repo ", fg="yellow") + click.style("to see whats available 🧙 🎉 🦉", fg="green"))
+    click.echo(
+        click.style("You're all set, try", fg="green")
+        + click.style(" hc repo ", fg="yellow")
+        + click.style("to see whats available 🧙 🎉 🦉", fg="green")
+    )
 
 
 @cli.command(
-    name="urlsearch", context_settings=dict(ignore_unknown_options=True, allow_extra_args=True),
-    short_help="Create and execute a search from a Humio URL"
+    name="urlsearch",
+    context_settings=dict(ignore_unknown_options=True, allow_extra_args=True),
+    short_help="Create and execute a search from a Humio URL",
 )
 @click.option(
     "--dry/--no-dry",
