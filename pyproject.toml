@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "humiocli"
-version = "0.2.4"
+version = "0.3.0"
 description = "Command line interface for interacting with Humio API using the humiocore library"
 authors = ["Jostein Haukeli"]
 repository = "https://github.com/gwtwod/py3humiocli"

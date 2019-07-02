@@ -47,7 +47,7 @@ class AliasedGroup(click.Group):
         ctx.fail("Too many matches: %s" % ", ".join(sorted(matches)))
 
 
-@click.group(cls=AliasedGroup)
+@click.group(cls=AliasedGroup, context_settings=dict(help_option_names=["-h", "--help"]))
 @click.option(
     "-v",
     "verbosity",
@@ -71,21 +71,21 @@ def cli(verbosity):
     humiocore.setup_excellent_logging(verbosity)
 
 
-@cli.command()
+@cli.command(short_help="Search for data in Humio")
 @click.option(
-    "--base-url",
+    "--base-url", "-b",
     envvar="HUMIO_BASE_URL",
     required=True,
     help="Humio base URL to connect to, for example https://cloud.humio.com",
 )
 @click.option(
-    "--token",
+    "--token", "-t",
     envvar="HUMIO_TOKEN",
     required=True,
     help="Your *secret* API token found in your account settings",
 )
 @click.option(
-    "--repo",
+    "--repo", "-r",
     "repo_",
     envvar="HUMIO_REPO",
     multiple=True,
@@ -94,7 +94,7 @@ def cli(verbosity):
     help="Name of repository or view, supports wildcards and multiple options",
 )
 @click.option(
-    "--start",
+    "--start", "-s",
     envvar="HUMIO_START",
     default="@d",
     show_default=True,
@@ -102,7 +102,7 @@ def cli(verbosity):
     help="Begin search at this snaptime or common timestring",
 )
 @click.option(
-    "--end",
+    "--end", "-e",
     envvar="HUMIO_END",
     default="now",
     show_default=True,
@@ -110,12 +110,39 @@ def cli(verbosity):
     help="End search at this snaptime or common timestring",
 )
 @click.option(
-    "--color",
+    "--color", "-c",
     envvar="HUMIO_COLOR",
     default="auto",
     type=click.Choice(["auto", "always", "never"]),
     show_default=True,
     help="Colorize logging and known @rawstring formats",
+)
+@click.option(
+    "--outformat", "-o",
+    envvar="HUMIO_OUTFORMAT",
+    type=click.Choice(["pretty", "raw", "ndjson", "or-values", "or-fields"]),
+    default="pretty",
+    show_default=True,
+    help="Output format when emitting events. Pretty and raw outputs @rawstrings with "
+    "fallback to ND-JSON. or-values and or-fields will output search filter strings for use "
+    "in new searches, for example by piping to a new search with --fields read from stdin",
+)
+@click.option(
+    "--sort", "-S",
+    envvar="HUMIO_SORT",
+    default="@timestamp",
+    show_default=True,
+    metavar="FIELDNAME/<EMPTY>",
+    help="Field to sort results by, pass the empty string to disable",
+)
+@click.option(
+    "--fields", "-f",
+    envvar="HUMIO_FIELDS",
+    required=False,
+    metavar="JSON",
+    help="Optional fields to inject into the QUERY where wherever a token {{field}} occurs. "
+    "Input must be provided as JSON document. Using this option will disable waiting for fields "
+    "from STDIN when the QUERY contains tokens.",
 )
 @click.option(
     "--style",
@@ -140,24 +167,6 @@ def cli(verbosity):
     help="Pygments style to use when syntax-highlighting",
 )
 @click.option(
-    "--outformat",
-    envvar="HUMIO_OUTFORMAT",
-    type=click.Choice(["pretty", "raw", "ndjson", "or-values", "or-fields"]),
-    default="pretty",
-    show_default=True,
-    help="Output format when emitting events. Pretty and raw outputs @rawstrings with "
-    "fallback to ND-JSON. or-values and or-fields will output search filter strings for use "
-    "in new searches, for example by piping to a new search with --fields read from stdin",
-)
-@click.option(
-    "--sort",
-    envvar="HUMIO_SORT",
-    default="@timestamp",
-    show_default=True,
-    metavar="FIELDNAME/<EMPTY>",
-    help="Field to sort results by, pass the empty string to disable",
-)
-@click.option(
     "--asyncronous/--syncronous",
     envvar="HUMIO_ASYNCRONOUS",
     default=True,
@@ -165,18 +174,9 @@ def cli(verbosity):
     help="Run searches asyncronously or syncronously. Syncronous searches are streaming and will "
     "allow results that do not fit in memory if sorting is disabled (--sort='')",
 )
-@click.option(
-    "--fields",
-    envvar="HUMIO_FIELDS",
-    required=False,
-    metavar="JSON",
-    help="Optional fields to inject into the QUERY where wherever a token {{field}} occurs. "
-    "Input must be provided as JSON document. Using this option will disable waiting for fields "
-    "from STDIN when the QUERY contains tokens.",
-)
 @click.argument("query", envvar="HUMIO_QUERY")
 def search(
-    base_url, token, repo_, start, end, color, style, outformat, sort, asyncronous, fields, query
+    base_url, token, repo_, start, end, color, outformat, sort, fields, style, asyncronous, query
 ):
     """
     Execute a QUERY against the Humio API in the provided time range. QUERY may contain optional
@@ -278,21 +278,21 @@ def search(
         click.echo(" > Humio URL: " + click.style(url, fg="green"), err=True)
 
 
-@cli.command()
+@cli.command(short_help="List available repositories and views")
 @click.option(
-    "--base-url",
+    "--base-url", "-b",
     envvar="HUMIO_BASE_URL",
     required=True,
     help="Humio base URL to connect to, for example https://cloud.humio.com",
 )
 @click.option(
-    "--token",
+    "--token", "-t",
     envvar="HUMIO_TOKEN",
     required=True,
     help="Your *secret* API token found in your account settings",
 )
 @click.option(
-    "--color",
+    "--color", "-c",
     envvar="HUMIO_COLOR",
     default="auto",
     type=click.Choice(["auto", "always", "never"]),
@@ -300,7 +300,7 @@ def search(
     show_default=True,
 )
 @click.option(
-    "--filter",
+    "--filter", "-f"
     "filter_",
     envvar="HUMIO_FILTER",
     required=False,
@@ -353,34 +353,41 @@ def repo(base_url, token, color, filter_):
     print(tabulate(output, headers="keys"))
 
 
-@cli.command()
+@cli.command(short_help="Ingests events from files or STDIN into Humio")
 @click.option(
-    "--base-url",
+    "--base-url", "-b",
     envvar="HUMIO_BASE_URL",
     required=True,
     help="Humio base URL to connect to, for example https://cloud.humio.com",
 )
 @click.option(
-    "--ingest-token",
+    "--ingest-token", "-t",
     envvar="HUMIO_INGEST_TOKEN",
     required=True,
     help="Your *secret* ingest token found in your repository settings",
 )
 @click.option(
-    "--encoding",
-    envvar="HUMIO_ENCODING",
-    required=False,
-    help="Encoding to use when reading the provided files. Autodetected if not provided",
-)
-@click.option(
-    "--separator",
+    "--separator", "-s",
     envvar="HUMIO_SEPARATOR",
     default="^.",
     help="PATTERN indicating the start of a new event. Assumes single-line if not provided. "
     "For example `^\\d{4}-\\d{2}-\\d{2}[T\\s]\\d{2}:\\d{2}:\\d{2}`",
 )
 @click.option(
-    "--soft-limit",
+    "--fields", "-f",
+    envvar="HUMIO_FIELDS",
+    required=False,
+    default="{}",
+    help="Optional fields to send with all events. Must be provided as a parseable JSON object",
+)
+@click.option(
+    "--encoding", "-e",
+    envvar="HUMIO_ENCODING",
+    required=False,
+    help="Encoding to use when reading the provided files. Autodetected if not provided",
+)
+@click.option(
+    "--soft-limit", "-l",
     envvar="HUMIO_SOFT_LIMIT",
     default=2 ** 20,
     help="Soft limit for messages sent with each POST requests. Messages will throw a warning "
@@ -393,15 +400,8 @@ def repo(base_url, token, color, filter_):
     default=False,
     help="Prepare ingestion without commiting any changes",
 )
-@click.option(
-    "--fields",
-    envvar="HUMIO_FIELDS",
-    required=False,
-    default="{}",
-    help="Optional fields to send with all events. Must be provided as a parseable JSON object",
-)
 @click.argument("ingestfiles", nargs=-1, type=click.Path(exists=True))
-def ingest(base_url, ingest_token, encoding, separator, soft_limit, dry, fields, ingestfiles):
+def ingest(base_url, ingest_token, separator, fields, encoding, soft_limit, dry, ingestfiles):
     """
     Ingests events from files or STDIN with the provided event separator and ingest token. If no
     ingestfiles are provided events are expected from STDIN.
@@ -452,21 +452,21 @@ def ingest(base_url, ingest_token, encoding, separator, soft_limit, dry, fields,
             )
 
 
-@cli.command()
+@cli.command(short_help="Upload a parser file to a repo")
 @click.option(
-    "--base-url",
+    "--base-url", "-b",
     envvar="HUMIO_BASE_URL",
     required=True,
     help="Humio base URL to connect to, for example https://cloud.humio.com",
 )
 @click.option(
-    "--token",
+    "--token", "-t",
     envvar="HUMIO_TOKEN",
     required=True,
     help="Your *secret* API token found in your account settings",
 )
 @click.option(
-    "--repo",
+    "--repo", "-r",
     "repo_",
     envvar="HUMIO_REPO",
     multiple=True,
@@ -476,7 +476,7 @@ def ingest(base_url, ingest_token, encoding, separator, soft_limit, dry, fields,
     show_default=True,
 )
 @click.option(
-    "--encoding",
+    "--encoding", "-e",
     envvar="HUMIO_ENCODING",
     required=False,
     help="Encoding to use when reading the provided files. Autodetected if not provided",
@@ -517,7 +517,7 @@ def makeparser(base_url, token, repo_, encoding, parser):
         client.create_update_parser(repos=target_repos, parser=Path(parser).stem, source=source)
 
 
-@cli.command()
+@cli.command(short_help="Start a guided setup process to configure this CLI")
 def wizard():
     """
     Start a guided setup process to create/update the configuration file
@@ -567,22 +567,23 @@ def wizard():
 
 
 @cli.command(
-    name="urlsearch", context_settings=dict(ignore_unknown_options=True, allow_extra_args=True)
+    name="urlsearch", context_settings=dict(ignore_unknown_options=True, allow_extra_args=True),
+    short_help="Create and execute a search from a Humio URL"
 )
 @click.option(
-    "--execute/--no-execute",
-    envvar="HUMIO_EXECUTE",
+    "--dry/--no-dry",
+    envvar="HUMIO_DRY_RUN",
     required=False,
     default=False,
-    help="Execute the corresponding search command from a parsed Humio search URL",
+    help="Prepare a search command without executing it",
 )
 @click.argument("url", nargs=1)
 @click.pass_context
-def urlsearch(ctx, execute, url):
+def urlsearch(ctx, dry, url):
     """
-    Build a search command from a Humio search URL, and optionally execute
-    the resulting command. Extra options will be passed along to the search
-    command. See the search command help for allowed options.
+    Create and execute a search command from a Humio search URL. Extra options
+    will be passed along to the search command. Use the --dry option to create
+    the command without executing it.
     """
 
     query, repo_, start, end = humiocore.utils.parse_humio_url(url)
@@ -600,7 +601,7 @@ def urlsearch(ctx, execute, url):
 
     click.echo(" > Humio command: " + click.style(command, fg="green"), err=True)
 
-    if execute:
+    if not dry:
         subprocess.run(
             ["hc", "search", "--repo", repo_, "--start", str(start), "--end", str(end)]
             + options
