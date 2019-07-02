@@ -554,7 +554,7 @@ def wizard():
     if unmanaged:
         click.echo(
             click.style(
-                f"\nThe following keys are left unmodified: {', '.join(unmanaged)}", fg="yellow"
+                f"\nThe following keys are left unmodified: {', '.join(unmanaged)}\n", fg="yellow"
             )
         )
 
@@ -562,6 +562,8 @@ def wizard():
     with open(env_file, "w+") as config_io:
         for key, value in env.items():
             config_io.write(f"HUMIO_{key.upper()}={value}\n")
+
+    click.echo(click.style("You're all set, try", fg="green") + click.style(" hc repo ", fg="yellow") + click.style("to see whats available 🧙 🎉 🦉", fg="green"))
 
 
 @cli.command(
