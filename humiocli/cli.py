@@ -4,6 +4,8 @@ import json
 import sys
 import os
 import re
+import shlex
+import subprocess
 from collections import defaultdict
 from fnmatch import fnmatch
 from pathlib import Path
@@ -268,6 +270,12 @@ def search(
                 print(utils.highlight(output, style=style))
             else:
                 print(output)
+
+    for repository in target_repos:
+        url = humiocore.utils.create_humio_url(
+            base_url, repository, query, start, end, scheme="https"
+        )
+        click.echo(" > Humio URL: " + click.style(url, fg="green"), err=True)
 
 
 @cli.command()
@@ -554,6 +562,48 @@ def wizard():
     with open(env_file, "w+") as config_io:
         for key, value in env.items():
             config_io.write(f"HUMIO_{key.upper()}={value}\n")
+
+
+@cli.command(
+    name="urlsearch", context_settings=dict(ignore_unknown_options=True, allow_extra_args=True)
+)
+@click.option(
+    "--execute/--no-execute",
+    envvar="HUMIO_EXECUTE",
+    required=False,
+    default=False,
+    help="Execute the corresponding search command from a parsed Humio search URL",
+)
+@click.argument("url", nargs=1)
+@click.pass_context
+def urlsearch(ctx, execute, url):
+    """
+    Build a search command from a Humio search URL, and optionally execute
+    the resulting command. Extra options will be passed along to the search
+    command. See the search command help for allowed options.
+    """
+
+    query, repo_, start, end = humiocore.utils.parse_humio_url(url)
+    safe_query = shlex.quote(query)
+
+    options = [option.split("=") for option in ctx.args]
+    safe_options = [
+        "=".join([opt[0], shlex.quote(opt[1])]) if len(opt) > 1 else opt[0] for opt in options
+    ]
+
+    if safe_options:
+        command = f'hc search --repo={repo_} --start="{start}" --end="{end}" {" ".join(safe_options)} {safe_query}'
+    else:
+        command = f'hc search --repo={repo_} --start="{start}" --end="{end}" {safe_query}'
+
+    click.echo(" > Humio command: " + click.style(command, fg="green"), err=True)
+
+    if execute:
+        subprocess.run(
+            ["hc", "search", "--repo", repo_, "--start", str(start), "--end", str(end)]
+            + options
+            + [query]
+        )
 
 
 if __name__ == "__main__":
