@@ -15,6 +15,7 @@ import colorama
 import pendulum
 import structlog
 import tzlocal
+import pandas as pd
 from pygments.styles import get_all_styles
 from tabulate import tabulate
 
@@ -127,12 +128,13 @@ def cli(verbosity):
     "--outformat",
     "-o",
     envvar="HUMIO_OUTFORMAT",
-    type=click.Choice(["pretty", "raw", "ndjson", "or-values", "or-fields"]),
+    type=click.Choice(["pretty", "raw", "ndjson", "table", "or-values", "or-fields"]),
     default="pretty",
     show_default=True,
     help="Output format when emitting events. Pretty and raw outputs @rawstrings with "
-    "fallback to ND-JSON. or-values and or-fields will output search filter strings for use "
-    "in new searches, for example by piping to a new search with --fields read from stdin",
+    "fallback to ND-JSON. Table will output an aligned table. The or-values and or-fields "
+    "choices will produce search filter strings for use in new searches, for example by "
+    "piping to a new search with --fields read from stdin",
 )
 @click.option(
     "--sort",
@@ -265,6 +267,34 @@ def search(
         data["SUBSEARCH"] = "(" + ") and (".join([value for key, value in data.items()]) + ")"
         print(json.dumps(data))
 
+    elif outformat == "table":
+        df = pd.DataFrame.from_dict(events)
+        leading = [
+            "timestamp",
+            "@timestamp",
+        ]
+        trailing = [
+            "#repo",
+            "#type",
+            "@host",
+            "@source",
+            "@timezone",
+            "@id",
+            "@rawstring",
+        ]
+
+        leading = [x for x in leading if x in df.columns]
+        trailing = [x for x in trailing if x in df.columns and x not in leading]
+        middle = [x for x in df.columns if x not in leading and x not in trailing]
+        df = df[leading + middle + trailing]
+
+        if "timestamp" in df.columns:
+            df = df.drop(columns=["@timestamp", "@timezone"])
+        elif "@timestamp" in df.columns:
+            df["@timestamp"] = pd.to_datetime(df["@timestamp"], unit="ms", utc=True)
+        df = df.fillna("")
+        print(tabulate(df, headers=df.columns))
+
     else:
         order = lambda x: sorted(events, key=lambda e: e.get(sort, 0)) if sort else x
         for event in order(events):
@@ -280,7 +310,7 @@ def search(
             else:
                 print(output)
 
-    for repository in target_repos:
+    for repository in sorted(target_repos):
         url = humiocore.utils.create_humio_url(
             base_url, repository, query, start, end, scheme="https"
         )
@@ -615,6 +645,8 @@ def urlsearch(ctx, dry, url):
     """
 
     query, repo_, start, end = humiocore.utils.parse_humio_url(url)
+    start = humiocore.utils.tstrip(start.isoformat())
+    end = humiocore.utils.tstrip(end.isoformat())
     safe_query = shlex.quote(query)
 
     options = [option.split("=") for option in ctx.args]
