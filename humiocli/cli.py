@@ -252,6 +252,7 @@ def search(base_url, token, repo_, start, end, color, outformat, sort, fields, s
         data = {key: " or ".join(values) for key, values in data.items()}
         data["SUBSEARCH"] = "(" + ") and (".join([value for key, value in data.items()]) + ")"
         print(json.dumps(data))
+        sys.exit(0)
 
     elif outformat == "table":
         df = pd.DataFrame.from_dict(events)
