@@ -21,14 +21,12 @@ from tabulate import tabulate
 
 import humiocore
 
-from . import prettyxml, utils
+from humiocli import prettyxml, utils
 
 # Make environment variables available
 humiocore.loadenv()
 
 logger = structlog.getLogger(__name__)
-# Restore original stdout after Colorama rudely overwrites it through Structlog
-sys.stdout = sys.__stdout__
 
 
 class AliasedGroup(click.Group):
@@ -177,18 +175,8 @@ def cli(verbosity):
     show_default=True,
     help="Pygments style to use when syntax-highlighting",
 )
-@click.option(
-    "--asyncronous/--syncronous",
-    envvar="HUMIO_ASYNCRONOUS",
-    default=True,
-    show_default=True,
-    help="Run searches asyncronously or syncronously. Syncronous searches are streaming and will "
-    "allow results that do not fit in memory if sorting is disabled (--sort='')",
-)
 @click.argument("query", envvar="HUMIO_QUERY")
-def search(
-    base_url, token, repo_, start, end, color, outformat, sort, fields, style, asyncronous, query
-):
+def search(base_url, token, repo_, start, end, color, outformat, sort, fields, style, query):
     """
     Execute a QUERY against the Humio API in the provided time range. QUERY may contain optional
     tokens to inject provided fields into the query wherever `{{field}}` occurs. These fields must
@@ -241,10 +229,8 @@ def search(
         if meta.get("read_permission") and matches(reponame)
     }
 
-    if asyncronous:
-        events = client.async_search(query, target_repos, start, end)
-    else:
-        events = client.streaming_search(query, target_repos, start, end)
+    events = client.streaming_search(query, target_repos, start, end)
+    event_stats = dict()
 
     if outformat == "or-values" or outformat == "or-fields":
         if outformat == "or-values":
@@ -289,7 +275,7 @@ def search(
         df = df[leading + middle + trailing]
 
         if "timestamp" in df.columns:
-            df = df.drop(columns=["@timestamp", "@timezone"])
+            df = df.drop(columns=["@timestamp", "@timezone"], errors="ignore")
         elif "@timestamp" in df.columns:
             df["@timestamp"] = pd.to_datetime(df["@timestamp"], unit="ms", utc=True)
         df = df.fillna("")
@@ -670,4 +656,4 @@ def urlsearch(ctx, dry, url):
 
 
 if __name__ == "__main__":
-    cli(verbosity=1)
+    cli()
