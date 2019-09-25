@@ -4,7 +4,10 @@ Collection of misc utility functions
 
 import re
 import sys
+import json
+from collections import defaultdict
 
+from tabulate import tabulate
 import colorama
 import pandas as pd
 import snaptime
@@ -164,3 +167,75 @@ def highlight(rawstring, style):
     except Exception as err:
         logger.exception("An unexptected error occured during highlighting", error=err)
         return rawstring
+
+
+def searchstring_from_fields(events, outformat, ignored=None):
+    """
+    Generate Humio search strings from all available fields in all events by OR-ing all
+    values (if outformat is or-values), or fields and values (if outformat is or-fields).
+
+    A special searchstring SUBSEARCH is also provided by AND-ing all the individual searchstrings
+
+    Parameters
+    ----------
+    events : iterable
+        An iterable of dictionaries
+    outformat : string
+        The template name to use, either `or-fields` or `or-values`
+    ignored : list, optional
+        A list of fields that should be ignored. By default ["@timestamp", "@rawstring"]
+
+    Returns
+    -------
+    dict
+        A dictionary with field-names and searchstrings
+    """
+
+    if ignored is None:
+        ignored = ["@timestamp", "@rawstring"]
+
+    if outformat == "or-values":
+        template = "{value}"
+    else:
+        template = "{field}={value}"
+
+    data = defaultdict(set)
+
+    for event in events:
+        for field, value in event.items():
+            if field in ignored:
+                continue
+            data[field].add(template.format(field=json.dumps(field), value=json.dumps(value)))
+    if len(data.keys()) > 5:
+        logger.warning(
+            "The emitted searching includes more than 5 fields, did you forget select relevant fields?",
+            fields=sorted(data.keys()),
+        )
+    data = {key: " or ".join(values) for key, values in data.items()}
+    data["SUBSEARCH"] = "(" + ") and (".join([value for key, value in data.items()]) + ")"
+    return data
+
+
+def table_from_events(events, leading=None, trailing=None, drop=None):
+    df = pd.DataFrame.from_dict(events)
+    if leading is None:
+        leading = ["timestamp", "@timestamp"]
+    if trailing is None:
+        trailing = ["#repo", "#type", "@host", "@source", "@timezone", "@id", "@rawstring"]
+    if drop is None:
+        if "timestamp" in df.columns:
+            drop = ["@timestamp", "@timezone"]
+        else:
+            drop = []
+
+    df = df.drop(columns=drop, errors="ignore")
+    if "@timestamp" in df.columns:
+        df["@timestamp"] = pd.to_datetime(df["@timestamp"], unit="ms", utc=True)
+
+    leading = [x for x in leading if x in df.columns]
+    trailing = [x for x in trailing if x in df.columns and x not in leading]
+    middle = [x for x in df.columns if x not in leading and x not in trailing]
+    df = df[leading + middle + trailing]
+
+    df = df.fillna("")
+    return tabulate(df, headers=df.columns, showindex=False)

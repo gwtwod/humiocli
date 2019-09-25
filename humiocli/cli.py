@@ -138,10 +138,11 @@ def cli(verbosity):
     "--sort",
     "-S",
     envvar="HUMIO_SORT",
-    default="@timestamp",
+    default="",
     show_default=True,
     metavar="FIELDNAME/<EMPTY>",
-    help="Field to sort results by, pass the empty string to disable",
+    help="Field to sort results by. Pass the empty string to disable. Sorting requires holding "
+    "all results in memory, so consider sorting large datasets in Humio instead",
 )
 @click.option(
     "--fields",
@@ -151,7 +152,7 @@ def cli(verbosity):
     metavar="JSON",
     help="Optional fields to inject into the QUERY where wherever a token {{field}} occurs. "
     "Input must be provided as JSON document. Using this option will disable waiting for fields "
-    "from STDIN when the QUERY contains tokens.",
+    "from STDIN when the QUERY contains tokens",
 )
 @click.option(
     "--style",
@@ -230,57 +231,24 @@ def search(base_url, token, repo_, start, end, color, outformat, sort, fields, s
     }
 
     events = client.streaming_search(query, target_repos, start, end)
-    event_stats = dict()
 
     if outformat == "or-values" or outformat == "or-fields":
-        if outformat == "or-values":
-            template = "{value}"
-        else:
-            template = "{field}={value}"
-
-        data = defaultdict(set)
-        for event in events:
-            for field, value in event.items():
-                if field in ["@timestamp", "@rawstring"]:
-                    continue
-                data[field].add(template.format(field=json.dumps(field), value=json.dumps(value)))
-        if len(data.keys()) > 5:
-            logger.warning(
-                "The emitted searching includes more than 5 fields, did you forget select relevant fields?",
-                fields=sorted(data.keys()),
+        searchstrings = utils.searchstring_from_fields(events, outformat=outformat)
+        if searchstrings.get("SUBSEARCH") == "()":
+            logger.error(
+                "Search did not produce any results, unable to generate search strings",
+                query=query,
+                start=str(start),
+                end=str(end),
+                repo=list(repo_),
+                repositories=target_repos,
             )
-        data = {key: " or ".join(values) for key, values in data.items()}
-        data["SUBSEARCH"] = "(" + ") and (".join([value for key, value in data.items()]) + ")"
-        print(json.dumps(data))
+        else:
+            print(json.dumps(searchstrings, ensure_ascii=False))
         sys.exit(0)
 
     elif outformat == "table":
-        df = pd.DataFrame.from_dict(events)
-        leading = [
-            "timestamp",
-            "@timestamp",
-        ]
-        trailing = [
-            "#repo",
-            "#type",
-            "@host",
-            "@source",
-            "@timezone",
-            "@id",
-            "@rawstring",
-        ]
-
-        leading = [x for x in leading if x in df.columns]
-        trailing = [x for x in trailing if x in df.columns and x not in leading]
-        middle = [x for x in df.columns if x not in leading and x not in trailing]
-        df = df[leading + middle + trailing]
-
-        if "timestamp" in df.columns:
-            df = df.drop(columns=["@timestamp", "@timezone"], errors="ignore")
-        elif "@timestamp" in df.columns:
-            df["@timestamp"] = pd.to_datetime(df["@timestamp"], unit="ms", utc=True)
-        df = df.fillna("")
-        print(tabulate(df, headers=df.columns))
+        print(utils.table_from_events(events))
 
     else:
         order = lambda x: sorted(events, key=lambda e: e.get(sort, 0)) if sort else x
