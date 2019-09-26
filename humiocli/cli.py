@@ -297,34 +297,53 @@ def search(base_url, token, repo_, start, end, color, outformat, sort, fields, s
     show_default=True,
 )
 @click.option(
-    "--filter",
-    "-f",
-    "filter_",
-    envvar="HUMIO_FILTER",
+    "--ignore",
+    "-i",
+    "ignore",
+    envvar="HUMIO_IGNORE",
+    default="(-qa|-test)$",
     required=False,
-    type=click.Choice(["read", "noread"]),
-    help="Only list repos with or without read access",
+    type=str,
+    help="Ignore repositories and views with names matching the provided pattern. Pass the empty "
+    "string to disable this option.",
 )
-def repo(base_url, token, color, filter_):
+@click.option(
+    "--outformat",
+    "-o",
+    envvar="HUMIO_OUTFORMAT",
+    type=click.Choice(["raw", "table"]),
+    default="table",
+    show_default=True,
+    help="Output format when emitting repositories and views.",
+)
+def repo(base_url, token, color, ignore, outformat):
     """List available repositories and views matching an optional filter."""
     utils.color_init(color)
 
     client = humiocore.HumioAPI(base_url=base_url, token=token)
     repositories = client.repositories()
 
+    if ignore:
+        repositories = {
+            name: repo for name, repo in repositories.items() if not re.search(ignore, name)
+        }
+
     def _emojify(authorized):
         if authorized:
             return f"{colorama.Fore.GREEN}✓{colorama.Style.RESET_ALL}"
         return f"{colorama.Fore.RED}✗{colorama.Style.RESET_ALL}"
 
+    if outformat == "raw":
+        for reponame, meta in sorted(repositories.items()):
+            last_ingest = meta.get("last_ingest")
+            if last_ingest:
+                meta["last_ingest"] = str(last_ingest)
+            print(meta)
+        sys.exit(0)
+
     output = []
     for reponame, meta in sorted(repositories.items()):
         readable = meta.get("read_permission", False)
-
-        if filter_ == "read" and not readable:
-            continue
-        if filter_ == "noread" and readable:
-            continue
         colorprefix = colorama.Fore.GREEN if readable else colorama.Fore.RED
 
         try:
@@ -345,9 +364,9 @@ def repo(base_url, token, color, filter_):
             "Dashboards": _emojify(meta.get("parseradmin_permission")),
             "Queries": _emojify(meta.get("parseradmin_permission")),
             "Files": _emojify(meta.get("parseradmin_permission")),
+            "Type": meta.get("type"),
         }
         output.append(data)
-
     print(tabulate(output, headers="keys"))
 
 

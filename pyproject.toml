@@ -22,7 +22,7 @@ pygments = "^2.3"
 click = "^7.0"
 tabulate = "^0.8.3"
 chardet = "^3.0"
-humiocore = {git = "https://github.com/gwtwod/py3humiocore.git", rev = "b9e4e50caf84f73195b3ea5cb28628df0475fc88"}
+humiocore = {git = "https://github.com/gwtwod/py3humiocore.git", tag = "0.3.0"}
 
 [tool.poetry.dev-dependencies]
 black = { version = "*", allows-prereleases = true }
