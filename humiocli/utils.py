@@ -5,6 +5,7 @@ Collection of misc utility functions
 import re
 import sys
 import json
+from fnmatch import fnmatch
 from collections import defaultdict
 
 from tabulate import tabulate
@@ -239,3 +240,62 @@ def table_from_events(events, leading=None, trailing=None, drop=None):
 
     df = df.fillna("")
     return tabulate(df, headers=df.columns, showindex=False)
+
+
+def filter_repositories(repositories, patterns=None, ignore=None, strict_views=True, **kwargs):
+    """
+    Takes a dict of repositories (`humiocore.HumioAPI.repositories()`) and
+    returns a reduced version according to the supplied filters.
+
+    Parameters
+    ----------
+    repositories : dict
+        A dictionary of repo names and their properties, see `humiocore.HumioAPI.repositories()`
+    patterns : list, optional
+        A list of simple `fnmatch` strings, allowing wildcards, by default ["*"]
+    ignore : regex string, optional
+        A regex string matching repo names to ignore, by default None
+    strict_views : bool, optional
+        Require view names to be matched exactly, by default True
+    **kwargs: optional
+        Repository must have a key==value for the provided key-value argument
+
+    Returns
+    -------
+    dict
+        A dictionary of repo names and their properties
+    """
+
+    if not patterns:
+        patterns = ["*"]
+    matching_repositories = {}
+
+    def _check_attributes(repository, attributes):
+        for attr, value in attributes.items():
+            if attr not in repository:
+                return False
+            if repository[attr] != value:
+                return False
+        return True
+
+    for name, repository in repositories.items():
+        for pattern in patterns:
+            if strict_views and repository.get("type") == "view" and name != pattern:
+                # Views must match exactly in strict mode, try next pattern
+                continue
+
+            if not fnmatch(name, pattern):
+                # No fnmatch, try next pattern
+                continue
+
+            if ignore and re.search(ignore, name):
+                # Repo should be ignored
+                continue
+
+            if not _check_attributes(repository, kwargs):
+                # At least one attribute requirement does not match
+                continue
+
+            matching_repositories[name] = repository
+
+    return matching_repositories

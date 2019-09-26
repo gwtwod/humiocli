@@ -7,7 +7,6 @@ import re
 import shlex
 import subprocess
 from collections import defaultdict
-from fnmatch import fnmatch
 from pathlib import Path
 
 import click
@@ -91,9 +90,30 @@ def cli(verbosity):
     "repo_",
     envvar="HUMIO_REPO",
     multiple=True,
-    default=["sandbox"],
+    default=["sandbox_*"],
     show_default=True,
-    help="Name of repository or view, supports wildcards and multiple options",
+    help="Name of repository or view, supports wildcards and multiple options. View names must "
+    "match the pattern exactly unless --no-strict-views is set.",
+)
+@click.option(
+    "--ignore-repo",
+    "-i",
+    "ignore_repo",
+    envvar="HUMIO_IGNORE_REPO",
+    default="(-qa|-test)$",
+    show_default=True,
+    required=False,
+    type=str,
+    help="Ignore repositories and views with names matching the provided pattern. Pass the empty "
+    "string to disable this option.",
+)
+@click.option(
+    "--strict-views/--no-strict-views",
+    envvar="HUMIO_STRICT_VIEWS",
+    required=False,
+    default=True,
+    show_default=True,
+    help="Require view names (special repos that include one or more repos) to match exactly",
 )
 @click.option(
     "--start",
@@ -177,7 +197,9 @@ def cli(verbosity):
     help="Pygments style to use when syntax-highlighting",
 )
 @click.argument("query", envvar="HUMIO_QUERY")
-def search(base_url, token, repo_, start, end, color, outformat, sort, fields, style, query):
+def search(
+    base_url, token, repo_, ignore_repo, strict_views, start, end, color, outformat, sort, fields, style, query
+):
     """
     Execute a QUERY against the Humio API in the provided time range. QUERY may contain optional
     tokens to inject provided fields into the query wherever `{{field}}` occurs. These fields must
@@ -221,28 +243,16 @@ def search(base_url, token, repo_, start, end, color, outformat, sort, fields, s
 
     client = humiocore.HumioAPI(base_url=base_url, token=token)
 
-    matches = lambda x: any(
-        [fnmatch(x, pattern) for pattern in repo_]  # pylint: disable=not-an-iterable
+    target_repos = utils.filter_repositories(
+        client.repositories(), repo_, ignore=ignore_repo, strict_views=strict_views, read_permission=True
     )
-    target_repos = {
-        reponame
-        for reponame, meta in client.repositories().items()
-        if meta.get("read_permission") and matches(reponame)
-    }
 
     events = client.streaming_search(query, target_repos, start, end)
 
     if outformat == "or-values" or outformat == "or-fields":
         searchstrings = utils.searchstring_from_fields(events, outformat=outformat)
         if searchstrings.get("SUBSEARCH") == "()":
-            logger.error(
-                "Search did not produce any results, unable to generate search strings",
-                query=query,
-                start=str(start),
-                end=str(end),
-                repo=list(repo_),
-                repositories=target_repos,
-            )
+            logger.error("Search did not produce any results, unable to generate search strings")
         else:
             print(json.dumps(searchstrings, ensure_ascii=False))
         sys.exit(0)
@@ -297,11 +307,12 @@ def search(base_url, token, repo_, start, end, color, outformat, sort, fields, s
     show_default=True,
 )
 @click.option(
-    "--ignore",
+    "--ignore-repo",
     "-i",
-    "ignore",
-    envvar="HUMIO_IGNORE",
+    "ignore_repo",
+    envvar="HUMIO_IGNORE_REPO",
     default="(-qa|-test)$",
+    show_default=True,
     required=False,
     type=str,
     help="Ignore repositories and views with names matching the provided pattern. Pass the empty "
@@ -316,17 +327,15 @@ def search(base_url, token, repo_, start, end, color, outformat, sort, fields, s
     show_default=True,
     help="Output format when emitting repositories and views.",
 )
-def repo(base_url, token, color, ignore, outformat):
+@click.argument("PATTERNS", nargs=-1)
+def repo(base_url, token, color, ignore_repo, outformat, patterns):
     """List available repositories and views matching an optional filter."""
     utils.color_init(color)
 
     client = humiocore.HumioAPI(base_url=base_url, token=token)
-    repositories = client.repositories()
 
-    if ignore:
-        repositories = {
-            name: repo for name, repo in repositories.items() if not re.search(ignore, name)
-        }
+    repositories = utils.filter_repositories(
+            client.repositories(), patterns, ignore=ignore_repo, strict_views=False)
 
     def _emojify(authorized):
         if authorized:
@@ -496,10 +505,30 @@ def ingest(base_url, ingest_token, separator, fields, encoding, soft_limit, dry,
     "repo_",
     envvar="HUMIO_REPO",
     multiple=True,
-    default=["sandbox"],
-    help="Name of repository to create or update the provided parser in, supports wildcards and "
-    "multiple options",
+    default=["sandbox_*"],
     show_default=True,
+    help="Name of repository or view, supports wildcards and multiple options. View names must "
+    "match the pattern exactly unless --no-strict-views is set.",
+)
+@click.option(
+    "--ignore-repo",
+    "-i",
+    "ignore_repo",
+    envvar="HUMIO_IGNORE_REPO",
+    default="(-qa|-test)$",
+    show_default=True,
+    required=False,
+    type=str,
+    help="Ignore repositories and views with names matching the provided pattern. Pass the empty "
+    "string to disable this option.",
+)
+@click.option(
+    "--strict-views/--no-strict-views",
+    envvar="HUMIO_STRICT_VIEWS",
+    required=False,
+    default=True,
+    show_default=True,
+    help="Require view names (special repos that include one or more repos) to match exactly",
 )
 @click.option(
     "--encoding",
@@ -509,7 +538,7 @@ def ingest(base_url, ingest_token, separator, fields, encoding, soft_limit, dry,
     help="Encoding to use when reading the provided files. Autodetected if not provided",
 )
 @click.argument("parser", nargs=1, type=click.Path(exists=True))
-def makeparser(base_url, token, repo_, encoding, parser):
+def makeparser(base_url, token, repo_, ignore_repo, strict_views, encoding, parser):
     """
     Takes a parser file and creates or updates a parser with the same name as the file
     in the requested repository (or repositories).
@@ -519,11 +548,8 @@ def makeparser(base_url, token, repo_, encoding, parser):
 
     client = humiocore.HumioAPI(base_url=base_url, token=token)
 
-    matches = lambda x: any(
-        [fnmatch(x, pattern) for pattern in repo_]  # pylint: disable=not-an-iterable
-    )
-    target_repos = set(
-        [reponame for reponame, meta in client.repositories().items() if matches(reponame)]
+    target_repos = utils.filter_repositories(
+        client.repositories(), repo_, ignore=ignore_repo, strict_views=strict_views, parseradmin_permission=True
     )
 
     if not encoding:
