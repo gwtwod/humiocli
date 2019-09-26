@@ -21,7 +21,7 @@ if os.path.exists(readme_path):
 setup(
     long_description=readme,
     name='humiocli',
-    version='0.4.0',
+    version='0.5.0',
     description='Command line interface for interacting with Humio API using the humiocore library',
     python_requires='==3.*,>=3.6.0',
     project_urls={'repository': 'https://github.com/gwtwod/py3humiocli'},
@@ -37,7 +37,7 @@ setup(
         'tabulate==0.*,>=0.8.3', 'tzlocal==1.*,>=1.5.0'
     ],
     dependency_links=[
-        'git+https://github.com/gwtwod/py3humiocore.git@b9e4e50caf84f73195b3ea5cb28628df0475fc88#egg=humiocore'
+        'git+https://github.com/gwtwod/py3humiocore.git@0.3.0#egg=humiocore'
     ],
     extras_require={'dev': ['black', 'pylint==2.*,>=2.3.0']},
 )

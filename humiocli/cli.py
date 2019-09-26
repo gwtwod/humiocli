@@ -198,7 +198,19 @@ def cli(verbosity):
 )
 @click.argument("query", envvar="HUMIO_QUERY")
 def search(
-    base_url, token, repo_, ignore_repo, strict_views, start, end, color, outformat, sort, fields, style, query
+    base_url,
+    token,
+    repo_,
+    ignore_repo,
+    strict_views,
+    start,
+    end,
+    color,
+    outformat,
+    sort,
+    fields,
+    style,
+    query,
 ):
     """
     Execute a QUERY against the Humio API in the provided time range. QUERY may contain optional
@@ -243,9 +255,13 @@ def search(
 
     client = humiocore.HumioAPI(base_url=base_url, token=token)
 
-    target_repos = utils.filter_repositories(
-        client.repositories(), repo_, ignore=ignore_repo, strict_views=strict_views, read_permission=True
-    )
+    target_repos = [name for name in utils.filter_repositories(
+        client.repositories(),
+        repo_,
+        ignore=ignore_repo,
+        strict_views=strict_views,
+        read_permission=True,
+    )]
 
     events = client.streaming_search(query, target_repos, start, end)
 
@@ -335,7 +351,8 @@ def repo(base_url, token, color, ignore_repo, outformat, patterns):
     client = humiocore.HumioAPI(base_url=base_url, token=token)
 
     repositories = utils.filter_repositories(
-            client.repositories(), patterns, ignore=ignore_repo, strict_views=False)
+        client.repositories(), patterns, ignore=ignore_repo, strict_views=False
+    )
 
     def _emojify(authorized):
         if authorized:
@@ -548,9 +565,13 @@ def makeparser(base_url, token, repo_, ignore_repo, strict_views, encoding, pars
 
     client = humiocore.HumioAPI(base_url=base_url, token=token)
 
-    target_repos = utils.filter_repositories(
-        client.repositories(), repo_, ignore=ignore_repo, strict_views=strict_views, parseradmin_permission=True
-    )
+    target_repos = [name for name in utils.filter_repositories(
+        client.repositories(),
+        repo_,
+        ignore=ignore_repo,
+        strict_views=strict_views,
+        parseradmin_permission=True,
+    ).keys()]
 
     if not encoding:
         detected = utils.detect_encoding(parser)
