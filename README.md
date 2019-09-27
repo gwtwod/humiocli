@@ -1,5 +1,11 @@
 # Do things with the Humio API
 
+> This project requires `Python>=3.6`
+
+## Installation
+
+    pip install git+https://github.com/gwtwod/py3humiocli
+
 ## First time setup
 
 Start the guided setup wizard to configure your environment
@@ -95,22 +101,17 @@ hc ingest README.md --separator '^#' --fields '{"#repo":"sandbox", "#type":"mark
 To install the cli and core packages in editable mode:
 
 ```bash
-git clone https://github.com/gwtwod/py3humiocore.git
 git clone https://github.com/gwtwod/py3humiocli.git
-# order matters if you want to be able to edit humiocore as well
-pip install -e py3humiocore
 pip install -e py3humiocli
 ```
 
 ## Self-contained distribution
 
-> _The runtime interpreter must be specified if the system interpreter is incompatible, for example on RHEL7_
-
 With Shiv:
 
 ```bash
 git clone https://github.com/gwtwod/py3humiocli.git
-shiv -c hc -o hc py3humiocli/ -p /opt/rh/rh-python36/root/bin/python3.6
+shiv -c hc -o hc py3humiocli/ -p "/usr/bin/env python3"
 ```
 
 With Pex:
@@ -118,4 +119,4 @@ With Pex:
 ```bash
 git clone https://github.com/gwtwod/py3humiocli.git
 git clone https://github.com/gwtwod/py3humiocore.git
-pex --disable-cache -c hc -o hc py3humiocli py3humiocore --python-shebang=/opt/rh/rh-python36/root/bin/python3.6
+pex --disable-cache -c hc -o hc py3humiocli py3humiocore --python-shebang="/usr/bin/env python3"
