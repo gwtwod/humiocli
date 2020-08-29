@@ -1,9 +1,9 @@
 [tool.poetry]
 name = "humiocli"
-version = "0.5.0"
-description = "Command line interface for interacting with Humio API using the humiocore library"
+version = "0.6.0"
+description = "Command line interface for interacting with the Humio API using the humioapi library"
 authors = ["Jostein Haukeli"]
-repository = "https://github.com/gwtwod/py3humiocli"
+repository = "https://github.com/gwtwod/humiocli"
 readme = "README.md"
 
 packages = [
@@ -11,22 +11,24 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.6"
-tzlocal = "^1.5"
+python = "^3.6.1"
+tzlocal = "^2.1"
 snaptime = "^0.2.4"
-pendulum = "^2.0"
+pendulum = "^2.1.2"
 pytz = "^2018.9"
-structlog = "^19.1"
-pandas = "^0.24.1"
-pygments = "^2.3"
-click = "^7.0"
-tabulate = "^0.8.3"
-chardet = "^3.0"
-humiocore = {git = "https://github.com/gwtwod/py3humiocore.git", tag = "0.3.0"}
+structlog = "^20.1.0"
+pandas = "^1.1.1"
+pygments = "^2.6.1"
+click = "^7.1.2"
+tabulate = "^0.8.7"
+chardet = "^3.0.4"
+colorama = "^0.4.3"
+humioapi = "^0.5.1"
 
 [tool.poetry.dev-dependencies]
-black = { version = "*", allows-prereleases = true }
-pylint = "^2.3"
+black = { version = "*", allow-prereleases = true }
+pylint = "^2.6.0"
+flake8 = "^3.8.3"
 
 [tool.poetry.scripts]
 hc = "humiocli.cli:cli"
@@ -36,7 +38,7 @@ from = {format = "poetry", path = "pyproject.toml"}
 to = {format = "setuppy", path = "setup.py"}
 
 [tool.black]
-line-length = 98
+line-length = 120
 target-version = ['py36', 'py37', 'py38']
 include = '\.pyi?$'
 exclude = '''

@@ -6,7 +6,6 @@ import os
 import re
 import shlex
 import subprocess
-from collections import defaultdict
 from pathlib import Path
 
 import click
@@ -18,12 +17,11 @@ import pandas as pd
 from pygments.styles import get_all_styles
 from tabulate import tabulate
 
-import humiocore
-
+import humioapi
 from humiocli import prettyxml, utils
 
 # Make environment variables available
-humiocore.loadenv()
+humioapi.loadenv()
 
 logger = structlog.getLogger(__name__)
 
@@ -66,7 +64,7 @@ def cli(verbosity):
     `HUMIO_<OPTION>=<VALUE>`. If a .env file exists at `~/.config/humio/.env` it will be
     automatically sourced on execution without overwriting the existing environment.
     """
-    humiocore.setup_excellent_logging(verbosity)
+    humioapi.setup_excellent_logging(verbosity)
 
 
 @cli.command(short_help="Search for data in Humio")
@@ -125,13 +123,13 @@ def cli(verbosity):
     help="Begin search at this snaptime or common timestring",
 )
 @click.option(
-    "--end",
+    "--stop",
     "-e",
-    envvar="HUMIO_END",
+    envvar="HUMIO_STOP",
     default="now",
     show_default=True,
     metavar="SNAPTIME/TIMESTRING",
-    help="End search at this snaptime or common timestring",
+    help="Stop search at this snaptime or common timestring",
 )
 @click.option(
     "--color",
@@ -204,7 +202,7 @@ def search(
     ignore_repo,
     strict_views,
     start,
-    end,
+    stop,
     color,
     outformat,
     sort,
@@ -225,9 +223,6 @@ def search(
     """
 
     utils.color_init(color)
-
-    start = utils.parse_ts(start)
-    end = utils.parse_ts(end)
 
     # Check for tokens in the query string and load fields if necessary
     token_pattern = re.compile(r"\{\{ *(?P<token>[@#._]?[\w.-]+) *\}\}")
@@ -253,7 +248,9 @@ def search(
     query = token_pattern.sub(token_sub, query)
     logger.info("Prepared query", query=query, repo=repo_, fields=json.dumps(fields))
 
-    client = humiocore.HumioAPI(base_url=base_url, token=token)
+    client = humioapi.HumioAPI(base_url=base_url, token=token)
+
+    print(repo_)
 
     target_repos = [
         name
@@ -265,8 +262,12 @@ def search(
             read_permission=True,
         )
     ]
+    if "sandbox" in repo_:
+        # Humio maps sandbox to the current user's sandbox so we shouldn't
+        # have to require the full name (sandbox-<some-long-id-here>)
+        target_repos.append("sandbox")
 
-    events = client.streaming_search(query, target_repos, start, end)
+    events = client.streaming_search(query, target_repos, start, stop)
 
     if outformat == "or-values" or outformat == "or-fields":
         searchstrings = utils.searchstring_from_fields(events, outformat=outformat)
@@ -295,9 +296,7 @@ def search(
                 print(output)
 
     for repository in sorted(target_repos):
-        url = humiocore.utils.create_humio_url(
-            base_url, repository, query, start, end, scheme="https"
-        )
+        url = humioapi.utils.create_humio_url(base_url, repository, query, start, stop, scheme="https")
         click.echo(" > Humio URL: " + click.style(url, fg="green"), err=True)
 
 
@@ -351,11 +350,9 @@ def repo(base_url, token, color, ignore_repo, outformat, patterns):
     """List available repositories and views matching an optional filter."""
     utils.color_init(color)
 
-    client = humiocore.HumioAPI(base_url=base_url, token=token)
+    client = humioapi.HumioAPI(base_url=base_url, token=token)
 
-    repositories = utils.filter_repositories(
-        client.repositories(), patterns, ignore=ignore_repo, strict_views=False
-    )
+    repositories = utils.filter_repositories(client.repositories(), patterns, ignore=ignore_repo, strict_views=False)
 
     def _emojify(authorized):
         if authorized:
@@ -367,7 +364,8 @@ def repo(base_url, token, color, ignore_repo, outformat, patterns):
             last_ingest = meta.get("last_ingest")
             if last_ingest:
                 meta["last_ingest"] = str(last_ingest)
-            print(meta)
+            meta["name"] = reponame
+            print(json.dumps(meta))
         sys.exit(0)
 
     output = []
@@ -464,7 +462,7 @@ def ingest(base_url, ingest_token, separator, fields, encoding, soft_limit, dry,
     If no encoding is provided chardet will be used to find an appropriate encoding.
     """
 
-    client = humiocore.HumioAPI(base_url=base_url, ingest_token=ingest_token)
+    client = humioapi.HumioAPI(base_url=base_url, ingest_token=ingest_token)
     fields = json.loads(fields)
 
     for ingestfile in ingestfiles:
@@ -566,7 +564,7 @@ def makeparser(base_url, token, repo_, ignore_repo, strict_views, encoding, pars
     If no encoding is provided chardet will be used to find an appropriate encoding.
     """
 
-    client = humiocore.HumioAPI(base_url=base_url, token=token)
+    client = humioapi.HumioAPI(base_url=base_url, token=token)
 
     target_repos = [
         name
@@ -578,17 +576,17 @@ def makeparser(base_url, token, repo_, ignore_repo, strict_views, encoding, pars
             parseradmin_permission=True,
         ).keys()
     ]
+    if "sandbox" in repo_:
+        # Humio maps sandbox to the current user's sandbox so we shouldn't
+        # have to require the full name (sandbox-<some-long-id-here>)
+        target_repos.append("sandbox")
 
     if not encoding:
         detected = utils.detect_encoding(parser)
         if detected["confidence"] < 0.9:
-            logger.warning(
-                "Detected encoding has low confidence", filedetection=detected, parser=parser
-            )
+            logger.warning("Detected encoding has low confidence", filedetection=detected, parser=parser)
         if not detected["encoding"]:
-            logger.error(
-                "Skipping file with unknown encoding", filedetection=detected, parser=parser
-            )
+            logger.error("Skipping file with unknown encoding", filedetection=detected, parser=parser)
             return
         encoding = detected["encoding"]
 
@@ -604,7 +602,7 @@ def wizard():
     """
 
     env_file = Path.home() / ".config/humio/.env"
-    env = humiocore.loadenv(env=env_file)
+    env = humioapi.loadenv(env=env_file)
 
     message = click.style("You're about to update your configuration file at", fg="green")
     message += f" {env_file}\n"
@@ -625,18 +623,14 @@ def wizard():
         default=env.get("start", "-2d@d"),
         type=str,
     )
-    env["end"] = click.prompt(
-        click.style("Enter your preferred default search end time", fg="green"),
-        default=env.get("end", "@s"),
+    env["stop"] = click.prompt(
+        click.style("Enter your preferred default search stop time", fg="green"),
+        default=env.get("stop", "@s"),
         type=str,
     )
-    unmanaged = set(env.keys()) - set(["base_url", "token", "start", "end"])
+    unmanaged = set(env.keys()) - set(["base_url", "token", "start", "stop"])
     if unmanaged:
-        click.echo(
-            click.style(
-                f"\nThe following keys are left unmodified: {', '.join(unmanaged)}\n", fg="yellow"
-            )
-        )
+        click.echo(click.style(f"\nThe following keys are left unmodified: {', '.join(unmanaged)}\n", fg="yellow"))
 
     os.makedirs(Path.home() / ".config/humio", exist_ok=True)
     with open(env_file, "w+") as config_io:
@@ -671,28 +665,24 @@ def urlsearch(ctx, dry, url):
     the command without executing it.
     """
 
-    query, repo_, start, end = humiocore.utils.parse_humio_url(url)
-    start = humiocore.utils.tstrip(start.isoformat())
-    end = humiocore.utils.tstrip(end.isoformat())
+    query, repo_, start, stop = humioapi.utils.parse_humio_url(url)
+    start = humioapi.utils.tstrip(start.isoformat())
+    stop = humioapi.utils.tstrip(stop.isoformat())
     safe_query = shlex.quote(query)
 
     options = [option.split("=") for option in ctx.args]
-    safe_options = [
-        "=".join([opt[0], shlex.quote(opt[1])]) if len(opt) > 1 else opt[0] for opt in options
-    ]
+    safe_options = ["=".join([opt[0], shlex.quote(opt[1])]) if len(opt) > 1 else opt[0] for opt in options]
 
     if safe_options:
-        command = f'hc search --repo={repo_} --start="{start}" --end="{end}" {" ".join(safe_options)} {safe_query}'
+        command = f'hc search --repo={repo_} --start="{start}" --stop="{stop}" {" ".join(safe_options)} {safe_query}'
     else:
-        command = f'hc search --repo={repo_} --start="{start}" --end="{end}" {safe_query}'
+        command = f'hc search --repo={repo_} --start="{start}" --stop="{stop}" {safe_query}'
 
     click.echo(" > Humio command: " + click.style(command, fg="green"), err=True)
 
     if not dry:
         subprocess.run(
-            ["hc", "search", "--repo", repo_, "--start", str(start), "--end", str(end)]
-            + options
-            + [query]
+            ["hc", "search", "--repo", repo_, "--start", str(start), "--stop", str(stop)] + options + [query]
         )
 
 
