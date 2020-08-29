@@ -1,10 +1,22 @@
-# Do things with the Humio API
+# Do things with the Humio API from the command line
 
-> This project requires `Python>=3.6`
+> This project requires `Python>=3.6.1`
+
+This is a companion CLI to the unofficial [humioapi](https://github.com/gwtwod/humioapi) library. It lets you use most of its features easily from the command line. If you're looking for the official lib+cli it can be found [here: humiolib](https://github.com/humio/python-humio).
 
 ## Installation
 
-    pip install git+https://github.com/gwtwod/py3humiocli
+    pip install humiocli
+
+## Main features
+
+* Streaming searches with several output formats
+* Subsearches (pipe output from one search into a new search)
+* Defaults configured through ENV variables
+* Splunk-like chainable relative time modifiers
+* Switch easily from browser to CLI by passing the search URL to urlsearch
+* Ingest data to Humio (but you should use Filebeat for serious things)
+* List repositories
 
 ## First time setup
 
@@ -24,47 +36,49 @@ existing environment.
 ### Execute a search in all repos starting with `reponame` and output `@rawstring`s
 
 ```bash
-hc search --repo reponame* '#type=accesslog statuscode>=400'
+hc search --repo 'reponame*' '#type=accesslog statuscode>=400'
 ```
 
-### Execute a search using results with fields from another search
+### Execute a search using results with fields from another search ("subsearch")
+
+#### Step 1: Set the output format to `or-fields`
 
 ```bash
-hc search --repo=auth '#type=audit username1 | select([session_id, app_name])' --outformat=or-fields | jq '.'
+hc search --repo=auth 'username | select([session_id, app_name])' --outformat=or-fields | jq '.'
 ```
 
-This results in a JSON-structure with search strings generated from all field-value combinations for each field. The special field `SUBSEARCH` combines all search strings for all fields.
+This gives a JSON-structure with prepared search strings from all field-value combinations. The special field `SUBSEARCH` combines all search strings for all fields.
 
 Example output:
 
-```text
+```json
 {
   "session_id": "\"session_id\"=\"5CF4A111\" or \"session_id\"=\"14C8BCEA\"",
-  "app_name": "\"app_name\"=\"frontend\"",
-  "SUBSEARCH": "(\"session_id\"=\"5CF4A111\" or \"session_id\"=\"14C8BCEA\") and (\"app_name\"=\"frontend\")"
+  "app_name": "\"app_name\"=\"frontstop\"",
+  "SUBSEARCH": "(\"session_id\"=\"5CF4A111\" or \"session_id\"=\"14C8BCEA\") and (\"app_name\"=\"frontstop\")"
 }
 ```
 
-This can then be used in a new search:
+#### Step 2: Pipe this result to a new search and reference the desired fields:
 
 ```bash
-hc search --repo=auth '#type=audit username1 | select([session_id, app_name])' --outformat=or-fields | hc --repo=frontend '#type=accesslog {{SUBSEARCH}}'
+hc search --repo=auth 'username | select([session_id, app_name])' --outformat=or-fields | hc --repo=frontstop '#type=accesslog {{session_id}}'
 ```
 
 ### Output aggregated results as ND-JSON events
 
 Simple example:
 
-> _Humios bucketing currently creates partial buckets in both ends depending on search period. Provide a whole start and end to ensure we only get whole buckets._
+> _Humios bucketing currently creates partial buckets in both stops depstoping on search period. You may want to provide a rounded start and stop to ensure we only get whole buckets._
 
 ```bash
-hc search --repo sandbox* --start=-60m@m --end=@m "#type=accesslog | timechart(span=1m, series=statuscode)"
+hc search --repo 'sandbox*' --start=-60m@m --stop=@m "#type=accesslog | timechart(span=1m, series=statuscode)"
 ```
 
-Or with a long multiline search
+Or with a longer multiline search
 
 ```bash
-hc search --repo sandbox* --start -60m@m --end=@m  "$(cat << EOF
+hc search --repo 'sandbox*' --start -60m@m --stop=@m  "$(cat << EOF
 #type=accesslog
 | case {
     statuscode<=400 | status_ok := 1 ;
@@ -81,7 +95,7 @@ EOF
 ### Upload a parser file to the destination repository, overwriting any existing parser
 
 ```bash
-hc makeparser --repo=sandbox* customjson
+hc makeparser --repo='sandbox*' customjson
 ```
 
 ### Ingest a single-line log file with an ingest-token associated with a parser
@@ -98,25 +112,26 @@ hc ingest README.md --separator '^#' --fields '{"#repo":"sandbox", "#type":"mark
 
 ## Development
 
-To install the cli and core packages in editable mode:
+To install the cli and api packages in editable mode:
 
 ```bash
-git clone https://github.com/gwtwod/py3humiocli.git
-pip install -e py3humiocli
+git clone https://github.com/gwtwod/humiocli.git
+poetry install
 ```
 
-## Self-contained distribution
+## Create self-contained executables for easy distribution
 
-With Shiv:
+With [Shiv](https://github.com/linkedin/shiv):
 
 ```bash
-git clone https://github.com/gwtwod/py3humiocli.git
-shiv -c hc -o hc py3humiocli/ -p "/usr/bin/env python3"
+git clone https://github.com/gwtwod/humiocli.git
+shiv -c hc -o hc humiocli/ -p "/usr/bin/env python3"
 ```
 
-With Pex:
+With [Pex](https://github.com/pantsbuild/pex):
 
 ```bash
-git clone https://github.com/gwtwod/py3humiocli.git
-git clone https://github.com/gwtwod/py3humiocore.git
-pex --disable-cache -c hc -o hc py3humiocli py3humiocore --python-shebang="/usr/bin/env python3"
+git clone https://github.com/gwtwod/humiocli.git
+git clone https://github.com/gwtwod/humioapi.git
+pex --disable-cache -c hc -o hc humiocli humioapi --python-shebang="/usr/bin/env python3"
+```

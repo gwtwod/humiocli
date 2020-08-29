@@ -6,6 +6,10 @@
 
 ### Changed
 
+- Renamed `end` parameters to `stop` everywhere
+- Allow use of "sandbox" repo name without specifying the whole sandbox ID or wildcare-use
+- Make `repo --outformat=raw` output JSON rather than just python repr()
+
 ### Deprecated
 
 ### Removed

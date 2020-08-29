@@ -13,9 +13,7 @@ re_namespace = re.compile(r""" xmlns[^\"']+['\"][^\"']+[\"']""")
 re_namespace_prefix = re.compile(r"""(<\/?)[^:<> ]{0,20}:""")
 
 
-def process(
-    rawstring, strip=True, clean=True, repair=False, output_format="pretty", indentation="    "
-):
+def process(rawstring, strip=True, clean=True, repair=False, output_format="pretty", indentation="    "):
     if strip:
         rawstring = re.sub(r"\s*(<[^<>]+>)\s*", r"\1", rawstring, flags=re.M)
     if clean:

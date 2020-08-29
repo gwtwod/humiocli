@@ -33,37 +33,6 @@ def color_init(color):
         colorama.init(strip=True)
 
 
-def parse_ts(timestring):
-    """
-    Parses a snapstring or common timestamp (ISO8859 and similar) and
-    returns a timezone-aware pandas timestamp using the local timezone.
-    """
-    if timestring.lower().startswith("now"):
-        timestring = ""
-
-    try:
-        return snaptime.snap(pd.Timestamp.now(tz=tzlocal.get_localzone()), timestring)
-    except snaptime.main.SnapParseError:
-        logger.debug(
-            "Could not parse the provided timestring with snaptime", timestring=timestring
-        )
-
-    try:
-        timestamp = pd.to_datetime(timestring, utc=False)
-        if timestamp.tzinfo:
-            return timestamp
-        else:
-            return timestamp.tz_localize(tz=tzlocal.get_localzone())
-    except ValueError:
-        logger.debug("Could not parse the provided timestring with pandas", timestring=timestring)
-
-    raise ValueError(
-        "Could understand the provided timestring ({}). Try something less ambigous?".format(
-            timestring
-        )
-    )
-
-
 def wrap_time(timestamp, offset):
     """
     Takes a datetime object and adjusts it with with the provided snaptime-offset
@@ -75,8 +44,10 @@ def humanized_bytes(size, precision=2):
     """
     Returns a humanized storage size string from bytes
     """
-    for unit in ["", "KB", "MB", "GB", "TB"]:
+    unit = ""
+    for x in ["", "KB", "MB", "GB", "TB"]:
         if size < 1000.0:
+            unit = x
             break
         size /= 1000.0
     return f"{size:.{precision}f} {unit}"
@@ -244,13 +215,13 @@ def table_from_events(events, leading=None, trailing=None, drop=None):
 
 def filter_repositories(repositories, patterns=None, ignore=None, strict_views=True, **kwargs):
     """
-    Takes a dict of repositories (`humiocore.HumioAPI.repositories()`) and
+    Takes a dict of repositories (`humioapi.HumioAPI.repositories()`) and
     returns a reduced version according to the supplied filters.
 
     Parameters
     ----------
     repositories : dict
-        A dictionary of repo names and their properties, see `humiocore.HumioAPI.repositories()`
+        A dictionary of repo names and their properties, see `humioapi.HumioAPI.repositories()`
     patterns : list, optional
         A list of simple `fnmatch` strings, allowing wildcards, by default ["*"]
     ignore : regex string, optional
