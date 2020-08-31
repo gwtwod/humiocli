@@ -1,6 +1,24 @@
 # Changelog
 
-## [Unreleased]
+# Changelog
+
+## [0.7.0]
+
+### Added
+
+### Changed
+
+- Added `ipython` output mode to `repo` and `search` commands which drops you into an ipython session where the results are made available. Furure enhancements pending. (jupyter-notebook and simple visualizations perhaps?)
+- Fixed some overzealous find/replace in the readme
+- Updated Shiv build instructions
+
+### Deprecated
+
+### Removed
+
+
+
+## [0.6.0] - 2020-08-29
 
 ### Added
 

@@ -2,17 +2,21 @@
 
 > This project requires `Python>=3.6.1`
 
-This is a companion CLI to the unofficial [humioapi](https://github.com/gwtwod/humioapi) library. It lets you use most of its features easily from the command line. If you're looking for the official lib+cli it can be found [here: humiolib](https://github.com/humio/python-humio).
+This is a companion CLI to the unofficial [humioapi](https://github.com/gwtwod/humioapi) library. It lets you use most of its features easily from the command line. If you're looking for the official CLI it can be found [here: humiolib](https://github.com/humio/python-humio).
 
 ## Installation
 
-    pip install humiocli
+```bash
+python3 -m pip install humiocli
+# or even better
+pipx install humiocli
+```
 
 ## Main features
 
 * Streaming searches with several output formats
 * Subsearches (pipe output from one search into a new search)
-* Defaults configured through ENV variables
+* Defaults configured through ENV variables (precedence: `shell options` > `shell environment` > `config-file`)
 * Splunk-like chainable relative time modifiers
 * Switch easily from browser to CLI by passing the search URL to urlsearch
 * Ingest data to Humio (but you should use Filebeat for serious things)
@@ -22,7 +26,9 @@ This is a companion CLI to the unofficial [humioapi](https://github.com/gwtwod/h
 
 Start the guided setup wizard to configure your environment
 
-    hc wizard
+```bash
+hc wizard
+```
 
 This will help you create an environment file with a default Humio URL and token, so you don't have to explicitly provide them as options later.
 
@@ -54,22 +60,22 @@ Example output:
 ```json
 {
   "session_id": "\"session_id\"=\"5CF4A111\" or \"session_id\"=\"14C8BCEA\"",
-  "app_name": "\"app_name\"=\"frontstop\"",
-  "SUBSEARCH": "(\"session_id\"=\"5CF4A111\" or \"session_id\"=\"14C8BCEA\") and (\"app_name\"=\"frontstop\")"
+  "app_name": "\"app_name\"=\"frontend\"",
+  "SUBSEARCH": "(\"session_id\"=\"5CF4A111\" or \"session_id\"=\"14C8BCEA\") and (\"app_name\"=\"frontend\")"
 }
 ```
 
 #### Step 2: Pipe this result to a new search and reference the desired fields:
 
 ```bash
-hc search --repo=auth 'username | select([session_id, app_name])' --outformat=or-fields | hc --repo=frontstop '#type=accesslog {{session_id}}'
+hc search --repo=auth 'username | select([session_id, app_name])' --outformat=or-fields | hc --repo=frontend '#type=accesslog {{session_id}}'
 ```
 
 ### Output aggregated results as ND-JSON events
 
 Simple example:
 
-> _Humios bucketing currently creates partial buckets in both stops depstoping on search period. You may want to provide a rounded start and stop to ensure we only get whole buckets._
+> _Humios bucketing currently creates partial buckets in both ends depending on search period. You may want to provide a rounded start and stop to ensure we only get whole buckets._
 
 ```bash
 hc search --repo 'sandbox*' --start=-60m@m --stop=@m "#type=accesslog | timechart(span=1m, series=statuscode)"
@@ -121,17 +127,11 @@ poetry install
 
 ## Create self-contained executables for easy distribution
 
-With [Shiv](https://github.com/linkedin/shiv):
+This uses [Shiv](https://github.com/linkedin/shiv) to create a `zipapp`. A single self-contained file with all python dependencies and a shebang.
+
+On first run, this will unpack the required modues to `~/.shiv/hc/` which will cause a short delay in startup. Subsequent runs should be fast however. The location can be controlled with the env variable `SHIV_ROOT`. You should probably clean this directory once in a while, since a new one is created every time the distributable changes.
 
 ```bash
-git clone https://github.com/gwtwod/humiocli.git
-shiv -c hc -o hc humiocli/ -p "/usr/bin/env python3"
-```
-
-With [Pex](https://github.com/pantsbuild/pex):
-
-```bash
-git clone https://github.com/gwtwod/humiocli.git
-git clone https://github.com/gwtwod/humioapi.git
-pex --disable-cache -c hc -o hc humiocli humioapi --python-shebang="/usr/bin/env python3"
+pip install shiv
+shiv -c hc -o hc humiocli -p "/usr/bin/env python3"
 ```

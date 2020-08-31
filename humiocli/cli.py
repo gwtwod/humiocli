@@ -144,7 +144,7 @@ def cli(verbosity):
     "--outformat",
     "-o",
     envvar="HUMIO_OUTFORMAT",
-    type=click.Choice(["pretty", "raw", "ndjson", "table", "or-values", "or-fields"]),
+    type=click.Choice(["pretty", "raw", "ndjson", "table", "or-values", "or-fields", "ipython"]),
     default="pretty",
     show_default=True,
     help="Output format when emitting events. Pretty and raw outputs @rawstrings with "
@@ -267,6 +267,10 @@ def search(
 
     events = client.streaming_search(query, target_repos, start, stop)
 
+    if outformat == "ipython":
+        utils.run_ipython({"repositories": target_repos, "client": client, "humioapi": humioapi, "events": events})
+        sys.exit(0)
+
     if outformat == "or-values" or outformat == "or-fields":
         searchstrings = utils.searchstring_from_fields(events, outformat=outformat)
         if searchstrings.get("SUBSEARCH") == "()":
@@ -338,7 +342,7 @@ def search(
     "--outformat",
     "-o",
     envvar="HUMIO_OUTFORMAT",
-    type=click.Choice(["raw", "table"]),
+    type=click.Choice(["raw", "table", "ipython"]),
     default="table",
     show_default=True,
     help="Output format when emitting repositories and views.",
@@ -351,6 +355,10 @@ def repo(base_url, token, color, ignore_repo, outformat, patterns):
     client = humioapi.HumioAPI(base_url=base_url, token=token)
 
     repositories = utils.filter_repositories(client.repositories(), patterns, ignore=ignore_repo, strict_views=False)
+
+    if outformat == "ipython":
+        utils.run_ipython({"repositories": repositories, "client": client, "humioapi": humioapi})
+        sys.exit(0)
 
     def _emojify(authorized):
         if authorized:
@@ -372,8 +380,7 @@ def repo(base_url, token, color, ignore_repo, outformat, patterns):
         colorprefix = colorama.Fore.GREEN if readable else colorama.Fore.RED
 
         try:
-            last_ingest = meta.get("last_ingest").tz_convert(tzlocal.get_localzone())
-            last_ingest = pendulum.parse(str(last_ingest))
+            last_ingest = meta.get("last_ingest").in_timezone(tzlocal.get_localzone())
             last_ingest = pendulum.now().diff_for_humans(last_ingest, True) + " ago"
         except (TypeError, AttributeError):
             last_ingest = colorama.Fore.RED + "no events" + colorama.Style.RESET_ALL

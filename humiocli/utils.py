@@ -53,6 +53,25 @@ def humanized_bytes(size, precision=2):
     return f"{size:.{precision}f} {unit}"
 
 
+def run_ipython(ns):
+    """
+    Drop into an ipython shell with the provided variables
+    """
+
+    try:
+        from IPython import start_ipython
+        from traitlets.config import Config
+    except ImportError as e:
+        raise ImportError(f"This feature requires the optional extra `ipykernel` package to be installed: {str(e)}")
+
+    msg = f"{colorama.Fore.LIGHTBLUE_EX}The following variables have been preloaded:{colorama.Fore.RESET}\n\n"
+    msg += "\n".join([f"  - {colorama.Fore.LIGHTBLUE_EX}{n} ({type(ns[n])}){colorama.Fore.RESET}" for n in ns.keys()])
+    msg += "\n"
+    config = Config()
+    config.TerminalInteractiveShell.banner1 = msg
+    start_ipython(argv=[], config=config, user_ns=ns)
+
+
 def detect_encoding(unknown_file):
     """Sniff a file's contents and try to detect the encoding used with chardet"""
 
