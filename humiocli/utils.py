@@ -13,7 +13,6 @@ import colorama
 import pandas as pd
 import snaptime
 import structlog
-import tzlocal
 from pygments import highlight as hl
 from pygments.formatters import Terminal256Formatter  # pylint: disable=no-name-in-module
 from pygments.lexers import XmlLexer  # pylint: disable=no-name-in-module
@@ -289,3 +288,10 @@ def filter_repositories(repositories, patterns=None, ignore=None, strict_views=T
             matching_repositories[name] = repository
 
     return matching_repositories
+
+
+def is_tty():
+    is_a_tty = hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()
+    if not is_a_tty:
+        return False
+    return True

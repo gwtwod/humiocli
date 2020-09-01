@@ -1,8 +1,20 @@
 # Changelog
 
-# Changelog
 
-## [0.7.0]
+## [0.7.1] - 2020-09-01
+
+### Added
+
+### Changed
+
+- Only write (to stderr) humio URLs after searches that attached to a TTY
+
+### Deprecated
+
+### Removed
+
+
+## [0.7.0] - 2020-08-30
 
 ### Added
 
@@ -15,7 +27,6 @@
 ### Deprecated
 
 ### Removed
-
 
 
 ## [0.6.0] - 2020-08-29

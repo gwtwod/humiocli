@@ -13,7 +13,6 @@ import colorama
 import pendulum
 import structlog
 import tzlocal
-import pandas as pd
 from pygments.styles import get_all_styles
 from tabulate import tabulate
 
@@ -297,9 +296,10 @@ def search(
             else:
                 print(output)
 
-    for repository in sorted(target_repos):
-        url = humioapi.utils.create_humio_url(base_url, repository, query, start, stop, scheme="https")
-        click.echo(" > Humio URL: " + click.style(url, fg="green"), err=True)
+    if utils.is_tty():
+        for repository in sorted(target_repos):
+            url = humioapi.utils.create_humio_url(base_url, repository, query, start, stop, scheme="https")
+            click.echo(" > Humio URL: " + click.style(url, fg="green"), err=True)
 
 
 @cli.command(short_help="List available repositories and views")
