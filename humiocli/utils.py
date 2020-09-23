@@ -291,7 +291,7 @@ def filter_repositories(repositories, patterns=None, ignore=None, strict_views=T
 
 
 def is_tty():
-    is_a_tty = hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()
+    is_a_tty = hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
     if not is_a_tty:
         return False
     return True

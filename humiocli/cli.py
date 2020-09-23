@@ -50,7 +50,7 @@ class AliasedGroup(click.Group):
     envvar="HUMIO_VERBOSITY",
     count=True,
     default=0,
-    help="Set logging level. Repeat to increase verbosity. [default: errors and warnings]"
+    help="Set logging level. Repeat to increase verbosity. [default: errors and warnings]",
 )
 def cli(verbosity):
     """
@@ -65,12 +65,7 @@ def cli(verbosity):
     automatically sourced on execution without overwriting the existing environment.
     """
 
-    level_map = {
-        0: logging.WARNING,
-        1: logging.INFO,
-        2: logging.DEBUG,
-        3: logging.NOTSET
-    }
+    level_map = {0: logging.WARNING, 1: logging.INFO, 2: logging.DEBUG, 3: logging.NOTSET}
     humioapi.initialize_logging(fmt="human", level=level_map[verbosity])
 
 
