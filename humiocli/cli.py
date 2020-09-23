@@ -12,6 +12,7 @@ import click
 import colorama
 import pendulum
 import structlog
+import logging
 import tzlocal
 from pygments.styles import get_all_styles
 from tabulate import tabulate
@@ -42,14 +43,14 @@ class AliasedGroup(click.Group):
         ctx.fail("Too many matches: %s" % ", ".join(sorted(matches)))
 
 
-@click.group(cls=AliasedGroup, context_settings=dict(help_option_names=["-h", "--help"]))
+@click.group(cls=AliasedGroup, context_settings=dict(help_option_names=["-h", "--help"], max_content_width=120))
 @click.option(
     "-v",
     "verbosity",
     envvar="HUMIO_VERBOSITY",
     count=True,
-    default=1,
-    help="Set logging level, repeat to increase verbosity",
+    default=0,
+    help="Set logging level. Repeat to increase verbosity. [default: errors and warnings]"
 )
 def cli(verbosity):
     """
@@ -63,7 +64,14 @@ def cli(verbosity):
     `HUMIO_<OPTION>=<VALUE>`. If a .env file exists at `~/.config/humio/.env` it will be
     automatically sourced on execution without overwriting the existing environment.
     """
-    humioapi.setup_excellent_logging(verbosity)
+
+    level_map = {
+        0: logging.WARNING,
+        1: logging.INFO,
+        2: logging.DEBUG,
+        3: logging.NOTSET
+    }
+    humioapi.initialize_logging(fmt="human", level=level_map[verbosity])
 
 
 @cli.command(short_help="Search for data in Humio")

@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.7.2] - 2020-09-23
+
+### Added
+
+### Changed
+
+- More intuitive verbose flag. Unset is logging.WARN, -v is logging-INFO, -vv is logging.DEBUG, -vvv is logging.NOTSET.
+- Bump humioapi to 0.6.0 Increases timeouts to 30 seconds by default in searches (httpx had 5 seconds default).
+- Use wider help output (from 79 to 120 characters)
+
+### Deprecated
+
+### Removed
+
 
 ## [0.7.1] - 2020-09-01
 

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "humiocli"
-version = "0.7.1"
+version = "0.7.2"
 description = "Command line interface for interacting with the Humio API using the humioapi library"
 authors = ["Jostein Haukeli"]
 repository = "https://github.com/gwtwod/humiocli"
@@ -23,7 +23,7 @@ click = "^7.1.2"
 tabulate = "^0.8.7"
 chardet = "^3.0.4"
 colorama = "^0.4.3"
-humioapi = "^0.5.1"
+humioapi = "^0.6.0"
 ipykernel = {version = "^5.3.4", optional = true}
 
 [tool.poetry.dev-dependencies]
