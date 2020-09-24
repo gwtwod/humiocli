@@ -20,6 +20,9 @@ from pygments.lexers.data import JsonLexer
 
 logger = structlog.getLogger(__name__)
 
+# Regex for extracting JSON values that look like XML
+JSON_XML_FIELD = re.compile(r':\s*"\s*(?P<xml_field><(?P<tag>[^">]+)>[^"][^"]+<\/(?P=tag)>)\s*"')
+
 
 def color_init(color):
     """Enable/Disable wrapping of sys.stdout with Colorama logic"""

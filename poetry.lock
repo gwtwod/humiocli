@@ -216,7 +216,7 @@ description = "An unofficial Python library for easy interaction with the Humio 
 name = "humioapi"
 optional = false
 python-versions = ">=3.6.1,<4.0.0"
-version = "0.6.0"
+version = "0.6.1"
 
 [package.dependencies]
 aiostream = ">=0.4.1,<0.5.0"
@@ -778,7 +778,7 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["pytest (>=3.5,<3.7.3 || >3.7.3)", "pytest-checkdocs (>=1.2.3)", "pytest-flake8", "pytest-cov", "jaraco.test (>=3.2.0)", "jaraco.itertools", "func-timeout", "pytest-black (>=0.3.7)", "pytest-mypy"]
 
 [metadata]
-content-hash = "6eda099b631165cd8d3050c2ce6ed2b6cbe1f89676b35f160e1ecc496dd065e3"
+content-hash = "357e92d7a6a04c64907bd790db73d45ba170228f54b48abffe08dd2c6a1488c9"
 lock-version = "1.0"
 python-versions = "^3.6.1"
 
@@ -853,8 +853,8 @@ httpx = [
     {file = "httpx-0.15.2.tar.gz", hash = "sha256:713a2deaf96d85bbd4a1fbdf0edb27d6b4ee2c9aaeda8433042367e4b9e1628d"},
 ]
 humioapi = [
-    {file = "humioapi-0.6.0-py3-none-any.whl", hash = "sha256:352ef301ce85b7f92e244b66628ccb2427b87e1c376867505cc749369eef19c9"},
-    {file = "humioapi-0.6.0.tar.gz", hash = "sha256:80daa62274d271c541aff01f2c4f599f54607831113717e13a35e1f306941203"},
+    {file = "humioapi-0.6.1-py3-none-any.whl", hash = "sha256:a2a22d6040899722cfdfa888d7062ea5452eaca68711000e54c6bee0602db507"},
+    {file = "humioapi-0.6.1.tar.gz", hash = "sha256:f1eff58ff7ccd6a06ee6f8c5e7f9375c986bb2a6561d8d849139ca40946a8ea9"},
 ]
 idna = [
     {file = "idna-2.10-py2.py3-none-any.whl", hash = "sha256:b97d804b1e9b523befed77c48dacec60e6dcb0b5391d57af6a65a312a90648c0"},

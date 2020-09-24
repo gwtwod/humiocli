@@ -43,6 +43,16 @@ class AliasedGroup(click.Group):
         ctx.fail("Too many matches: %s" % ", ".join(sorted(matches)))
 
 
+class OptionWithEnvinfo(click.Option):
+    """Custom click.Option adding information about environment variables"""
+
+    def get_help_record(self, ctx):
+        help_record = super().get_help_record(ctx)
+        if self.envvar is not None:
+            return (help_record[0], help_record[1] + f" [env:{self.envvar}]", *help_record[2:])
+        return help_record
+
+
 @click.group(cls=AliasedGroup, context_settings=dict(help_option_names=["-h", "--help"], max_content_width=120))
 @click.option(
     "-v",
@@ -50,7 +60,12 @@ class AliasedGroup(click.Group):
     envvar="HUMIO_VERBOSITY",
     count=True,
     default=0,
-    help="Set logging level. Repeat to increase verbosity. [default: errors and warnings]",
+    help=(
+        "Set logging level for internal messages. "
+        "Use -v for info, -vv for debug, -vvv for trace and -vvvv for everything. "
+        "[default: errors and warnings]"
+    ),
+    cls=OptionWithEnvinfo,
 )
 def cli(verbosity):
     """
@@ -64,9 +79,8 @@ def cli(verbosity):
     `HUMIO_<OPTION>=<VALUE>`. If a .env file exists at `~/.config/humio/.env` it will be
     automatically sourced on execution without overwriting the existing environment.
     """
-
-    level_map = {0: logging.WARNING, 1: logging.INFO, 2: logging.DEBUG, 3: logging.NOTSET}
-    humioapi.initialize_logging(fmt="human", level=level_map[verbosity])
+    level_map = {0: 30, 1: 20, 2: 10, 3: 5}
+    humioapi.initialize_logging(fmt="human", level=level_map.get(verbosity, 0))
 
 
 @cli.command(short_help="Search for data in Humio")
@@ -76,6 +90,7 @@ def cli(verbosity):
     envvar="HUMIO_BASE_URL",
     required=True,
     help="Humio base URL to connect to, for example https://cloud.humio.com",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--token",
@@ -83,6 +98,7 @@ def cli(verbosity):
     envvar="HUMIO_TOKEN",
     required=True,
     help="Your *secret* API token found in your account settings",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--repo",
@@ -94,6 +110,7 @@ def cli(verbosity):
     show_default=True,
     help="Name of repository or view, supports wildcards and multiple options. View names must "
     "match the pattern exactly unless --no-strict-views is set.",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--ignore-repo",
@@ -106,6 +123,7 @@ def cli(verbosity):
     type=str,
     help="Ignore repositories and views with names matching the provided pattern. Pass the empty "
     "string to disable this option.",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--strict-views/--no-strict-views",
@@ -114,6 +132,7 @@ def cli(verbosity):
     default=True,
     show_default=True,
     help="Require view names (special repos that include one or more repos) to match exactly",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--start",
@@ -123,6 +142,7 @@ def cli(verbosity):
     show_default=True,
     metavar="SNAPTIME/TIMESTRING",
     help="Begin search at this snaptime or common timestring",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--stop",
@@ -132,6 +152,7 @@ def cli(verbosity):
     show_default=True,
     metavar="SNAPTIME/TIMESTRING",
     help="Stop search at this snaptime or common timestring",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--color",
@@ -141,6 +162,7 @@ def cli(verbosity):
     type=click.Choice(["auto", "always", "never"]),
     show_default=True,
     help="Colorize logging and known @rawstring formats",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--outformat",
@@ -153,6 +175,7 @@ def cli(verbosity):
     "fallback to ND-JSON. Table will output an aligned table. The or-values and or-fields "
     "choices will produce search filter strings for use in new searches, for example by "
     "piping to a new search with --fields read from stdin",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--sort",
@@ -163,6 +186,7 @@ def cli(verbosity):
     metavar="FIELDNAME/<EMPTY>",
     help="Field to sort results by. Pass the empty string to disable. Sorting requires holding "
     "all results in memory, so consider sorting large datasets in Humio instead",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--fields",
@@ -173,6 +197,7 @@ def cli(verbosity):
     help="Optional fields to inject into the QUERY where wherever a token {{field}} occurs. "
     "Input must be provided as JSON document. Using this option will disable waiting for fields "
     "from STDIN when the QUERY contains tokens",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--style",
@@ -195,6 +220,7 @@ def cli(verbosity):
     ),
     show_default=True,
     help="Pygments style to use when syntax-highlighting",
+    cls=OptionWithEnvinfo,
 )
 @click.argument("query", envvar="HUMIO_QUERY")
 def search(
@@ -312,6 +338,7 @@ def search(
     envvar="HUMIO_BASE_URL",
     required=True,
     help="Humio base URL to connect to, for example https://cloud.humio.com",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--token",
@@ -319,6 +346,7 @@ def search(
     envvar="HUMIO_TOKEN",
     required=True,
     help="Your *secret* API token found in your account settings",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--color",
@@ -328,6 +356,7 @@ def search(
     type=click.Choice(["auto", "always", "never"]),
     help="Colorize output",
     show_default=True,
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--ignore-repo",
@@ -340,6 +369,7 @@ def search(
     type=str,
     help="Ignore repositories and views with names matching the provided pattern. Pass the empty "
     "string to disable this option.",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--outformat",
@@ -349,6 +379,7 @@ def search(
     default="table",
     show_default=True,
     help="Output format when emitting repositories and views.",
+    cls=OptionWithEnvinfo,
 )
 @click.argument("PATTERNS", nargs=-1)
 def repo(base_url, token, color, ignore_repo, outformat, patterns):
@@ -412,6 +443,7 @@ def repo(base_url, token, color, ignore_repo, outformat, patterns):
     envvar="HUMIO_BASE_URL",
     required=True,
     help="Humio base URL to connect to, for example https://cloud.humio.com",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--ingest-token",
@@ -419,6 +451,7 @@ def repo(base_url, token, color, ignore_repo, outformat, patterns):
     envvar="HUMIO_INGEST_TOKEN",
     required=True,
     help="Your *secret* ingest token found in your repository settings",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--separator",
@@ -427,6 +460,7 @@ def repo(base_url, token, color, ignore_repo, outformat, patterns):
     default="^.",
     help="PATTERN indicating the start of a new event. Assumes single-line if not provided. "
     "For example `^\\d{4}-\\d{2}-\\d{2}[T\\s]\\d{2}:\\d{2}:\\d{2}`",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--fields",
@@ -435,6 +469,7 @@ def repo(base_url, token, color, ignore_repo, outformat, patterns):
     required=False,
     default="{}",
     help="Optional fields to send with all events. Must be provided as a parseable JSON object",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--encoding",
@@ -442,6 +477,7 @@ def repo(base_url, token, color, ignore_repo, outformat, patterns):
     envvar="HUMIO_ENCODING",
     required=False,
     help="Encoding to use when reading the provided files. Autodetected if not provided",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--soft-limit",
@@ -450,6 +486,7 @@ def repo(base_url, token, color, ignore_repo, outformat, patterns):
     default=2 ** 20,
     help="Soft limit for messages sent with each POST requests. Messages will throw a warning "
     "and be sent by themselves if they exceed the limit",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--dry/--no-dry",
@@ -457,6 +494,7 @@ def repo(base_url, token, color, ignore_repo, outformat, patterns):
     required=False,
     default=False,
     help="Prepare ingestion without commiting any changes",
+    cls=OptionWithEnvinfo,
 )
 @click.argument("ingestfiles", nargs=-1, type=click.Path(exists=True))
 def ingest(base_url, ingest_token, separator, fields, encoding, soft_limit, dry, ingestfiles):
@@ -517,6 +555,7 @@ def ingest(base_url, ingest_token, separator, fields, encoding, soft_limit, dry,
     envvar="HUMIO_BASE_URL",
     required=True,
     help="Humio base URL to connect to, for example https://cloud.humio.com",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--token",
@@ -524,6 +563,7 @@ def ingest(base_url, ingest_token, separator, fields, encoding, soft_limit, dry,
     envvar="HUMIO_TOKEN",
     required=True,
     help="Your *secret* API token found in your account settings",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--repo",
@@ -535,6 +575,7 @@ def ingest(base_url, ingest_token, separator, fields, encoding, soft_limit, dry,
     show_default=True,
     help="Name of repository or view, supports wildcards and multiple options. View names must "
     "match the pattern exactly unless --no-strict-views is set.",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--ignore-repo",
@@ -547,6 +588,7 @@ def ingest(base_url, ingest_token, separator, fields, encoding, soft_limit, dry,
     type=str,
     help="Ignore repositories and views with names matching the provided pattern. Pass the empty "
     "string to disable this option.",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--strict-views/--no-strict-views",
@@ -555,6 +597,7 @@ def ingest(base_url, ingest_token, separator, fields, encoding, soft_limit, dry,
     default=True,
     show_default=True,
     help="Require view names (special repos that include one or more repos) to match exactly",
+    cls=OptionWithEnvinfo,
 )
 @click.option(
     "--encoding",
@@ -562,6 +605,7 @@ def ingest(base_url, ingest_token, separator, fields, encoding, soft_limit, dry,
     envvar="HUMIO_ENCODING",
     required=False,
     help="Encoding to use when reading the provided files. Autodetected if not provided",
+    cls=OptionWithEnvinfo,
 )
 @click.argument("parser", nargs=1, type=click.Path(exists=True))
 def makeparser(base_url, token, repo_, ignore_repo, strict_views, encoding, parser):
@@ -663,6 +707,7 @@ def wizard():
     required=False,
     default=False,
     help="Prepare a search command without executing it",
+    cls=OptionWithEnvinfo,
 )
 @click.argument("url", nargs=1)
 @click.pass_context
