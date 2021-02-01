@@ -1,24 +1,29 @@
 # Changelog
 
-
 ## [Unreleased]
 
 ### Added
 
 ### Changed
 
-## Fixed
+### Fixed
 
 ### Deprecated
 
 ### Removed
+
+## [0.8.0]
+
+### Changed
+
+- Bump `humioapi` to 0.7.0. Switches networking backend from `httpcore` to `urllib3` as a temporary measure for weird HTTP 502s in Humio 1.18
 
 
 ## [0.7.3] - 2020-09-24
 
 ### Changed
 
-- Bump humioapi to 0.6.1. Adds coloring to trace logging level (used by httpx) so colored console logging doesn't break with very verbose output.
+- Bump `humioapi` to 0.6.1. Adds coloring to trace logging level (used by `httpx`) so colored console logging doesn't break with very verbose output.
 - Add environment variable info to help strings
 
 
