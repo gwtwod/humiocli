@@ -12,7 +12,19 @@
 
 ### Removed
 
-## [0.8.0]
+## [0.8.1] - 2021-02-18
+
+### Changed
+
+- Bump `humioapi` to 0.8.2. APIs are now based on `humiolib` (wrapped by `humioapi`). This means several commands have changed slightly. All HTTP requests are now done through `requests` rather than `httpx`.
+- The `search` command no longer allows multiple repos. Use `humio-search-all` or a view instead. Reponame pattern related options are also removed due to this.
+- The `ingest` command now accept tags and parser as options.
+
+### Removed
+
+- Some short-option flags for little used options.
+
+## [0.8.0] - 2021-01-31
 
 ### Changed
 

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "humiocli"
-version = "0.8.0"
+version = "0.8.1"
 description = "Command line interface for interacting with the Humio API using the humioapi library"
 authors = ["Jostein Haukeli"]
 repository = "https://github.com/gwtwod/humiocli"
@@ -16,15 +16,16 @@ tzlocal = "^2.1"
 snaptime = "^0.2.4"
 pendulum = "^2.1.2"
 pytz = "^2018.9"
-structlog = "^20.1.0"
+structlog = "^20.2.0"
 pandas = "^1.1.1"
 pygments = "^2.6.1"
 click = "^7.1.2"
-tabulate = "^0.8.7"
+tabulate = "^0.8.8"
 chardet = "^4.0.0"
-colorama = "^0.4.3"
-humioapi = "^0.7.0"
-ipykernel = {version = "^5.3.4", optional = true}
+colorama = "^0.4.4"
+humioapi = "^0.8.2"
+ipykernel = {version = "^5.4.3", optional = true}
+Pygments = "^2.8.0"
 
 [tool.poetry.dev-dependencies]
 black = { version = "*", allow-prereleases = true }

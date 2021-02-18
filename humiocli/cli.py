@@ -12,7 +12,6 @@ import click
 import colorama
 import pendulum
 import structlog
-import logging
 import tzlocal
 from pygments.styles import get_all_styles
 from tabulate import tabulate
@@ -21,7 +20,7 @@ import humioapi
 from humiocli import prettyxml, utils
 
 # Make environment variables available
-humioapi.loadenv()
+humioapi.humio_loadenv()
 
 logger = structlog.getLogger(__name__)
 
@@ -105,33 +104,9 @@ def cli(verbosity):
     "-r",
     "repo_",
     envvar="HUMIO_REPO",
-    multiple=True,
-    default=["sandbox_*"],
+    default="sandbox",
     show_default=True,
-    help="Name of repository or view, supports wildcards and multiple options. View names must "
-    "match the pattern exactly unless --no-strict-views is set.",
-    cls=OptionWithEnvinfo,
-)
-@click.option(
-    "--ignore-repo",
-    "-i",
-    "ignore_repo",
-    envvar="HUMIO_IGNORE_REPO",
-    default="(-qa|-test)$",
-    show_default=True,
-    required=False,
-    type=str,
-    help="Ignore repositories and views with names matching the provided pattern. Pass the empty "
-    "string to disable this option.",
-    cls=OptionWithEnvinfo,
-)
-@click.option(
-    "--strict-views/--no-strict-views",
-    envvar="HUMIO_STRICT_VIEWS",
-    required=False,
-    default=True,
-    show_default=True,
-    help="Require view names (special repos that include one or more repos) to match exactly",
+    help="Name of repository or view to search against.",
     cls=OptionWithEnvinfo,
 )
 @click.option(
@@ -223,21 +198,7 @@ def cli(verbosity):
     cls=OptionWithEnvinfo,
 )
 @click.argument("query", envvar="HUMIO_QUERY")
-def search(
-    base_url,
-    token,
-    repo_,
-    ignore_repo,
-    strict_views,
-    start,
-    stop,
-    color,
-    outformat,
-    sort,
-    fields,
-    style,
-    query,
-):
+def search(base_url, token, repo_, start, stop, color, outformat, sort, fields, style, query):
     """
     Execute a QUERY against the Humio API in the provided time range. QUERY may contain optional
     tokens to inject provided fields into the query wherever `{{field}}` occurs. These fields must
@@ -277,26 +238,10 @@ def search(
     logger.info("Prepared query", query=query, repo=repo_, fields=json.dumps(fields))
 
     client = humioapi.HumioAPI(base_url=base_url, token=token)
-
-    target_repos = [
-        name
-        for name in utils.filter_repositories(
-            client.repositories(),
-            repo_,
-            ignore=ignore_repo,
-            strict_views=strict_views,
-            read_permission=True,
-        )
-    ]
-    if "sandbox" in repo_:
-        # Humio maps sandbox to the current user's sandbox so we shouldn't
-        # have to require the full name (sandbox-<some-long-id-here>)
-        target_repos.append("sandbox")
-
-    events = client.streaming_search(query, target_repos, start, stop)
+    events = client.streaming_search(query, repo_, start, stop)
 
     if outformat == "ipython":
-        utils.run_ipython({"repositories": target_repos, "client": client, "humioapi": humioapi, "events": events})
+        utils.run_ipython({"repository": repo_, "client": client, "humioapi": humioapi, "events": events})
         sys.exit(0)
 
     if outformat == "or-values" or outformat == "or-fields":
@@ -311,7 +256,7 @@ def search(
         print(utils.table_from_events(events))
 
     else:
-        order = lambda x: sorted(events, key=lambda e: e.get(sort, 0)) if sort else x
+        order = lambda x: sorted(events, key=lambda e: e.get(sort, 0)) if sort else x  # noqa
         for event in order(events):
             if outformat == "ndjson" or "@rawstring" not in event:
                 output = json.dumps(event, ensure_ascii=False, sort_keys=True)
@@ -326,9 +271,8 @@ def search(
                 print(output)
 
     if utils.is_tty():
-        for repository in sorted(target_repos):
-            url = humioapi.utils.create_humio_url(base_url, repository, query, start, stop, scheme="https")
-            click.echo(" > Humio URL: " + click.style(url, fg="green"), err=True)
+        url = humioapi.utils.create_humio_url(base_url, repo_, query, start, stop, scheme="https")
+        click.echo(" > Humio URL: " + click.style(url, fg="green"), err=True)
 
 
 @cli.command(short_help="List available repositories and views")
@@ -464,7 +408,6 @@ def repo(base_url, token, color, ignore_repo, outformat, patterns):
 )
 @click.option(
     "--fields",
-    "-f",
     envvar="HUMIO_FIELDS",
     required=False,
     default="{}",
@@ -472,8 +415,22 @@ def repo(base_url, token, color, ignore_repo, outformat, patterns):
     cls=OptionWithEnvinfo,
 )
 @click.option(
+    "--tags",
+    envvar="HUMIO_FIELDS",
+    required=False,
+    default="{}",
+    help="Optional fields to send with all events. Must be provided as a parseable JSON object",
+    cls=OptionWithEnvinfo,
+)
+@click.option(
+    "--parser",
+    envvar="HUMIO_PARSER",
+    required=False,
+    help="Name of the parser to use when ingesting events. Must exist in the destination repository",
+    cls=OptionWithEnvinfo,
+)
+@click.option(
     "--encoding",
-    "-e",
     envvar="HUMIO_ENCODING",
     required=False,
     help="Encoding to use when reading the provided files. Autodetected if not provided",
@@ -481,11 +438,10 @@ def repo(base_url, token, color, ignore_repo, outformat, patterns):
 )
 @click.option(
     "--soft-limit",
-    "-l",
     envvar="HUMIO_SOFT_LIMIT",
     default=2 ** 20,
-    help="Soft limit for messages sent with each POST requests. Messages will throw a warning "
-    "and be sent by themselves if they exceed the limit",
+    help="Soft limit for controlling batch sizes during ingestion. If an event exceeds "
+    "the limit it will still be sent in a separate request, but will also throw a warning.",
     cls=OptionWithEnvinfo,
 )
 @click.option(
@@ -497,7 +453,7 @@ def repo(base_url, token, color, ignore_repo, outformat, patterns):
     cls=OptionWithEnvinfo,
 )
 @click.argument("ingestfiles", nargs=-1, type=click.Path(exists=True))
-def ingest(base_url, ingest_token, separator, fields, encoding, soft_limit, dry, ingestfiles):
+def ingest(base_url, ingest_token, separator, fields, tags, parser, encoding, soft_limit, dry, ingestfiles):
     """
     Ingests events from files or STDIN with the provided event separator and ingest token. If no
     ingestfiles are provided events are expected from STDIN.
@@ -510,9 +466,9 @@ def ingest(base_url, ingest_token, separator, fields, encoding, soft_limit, dry,
 
     client = humioapi.HumioAPI(base_url=base_url, ingest_token=ingest_token)
     fields = json.loads(fields)
+    tags = json.loads(tags)
 
     for ingestfile in ingestfiles:
-
         if not encoding:
             detected = utils.detect_encoding(ingestfile)
             if detected["confidence"] < 0.9:
@@ -532,8 +488,10 @@ def ingest(base_url, ingest_token, separator, fields, encoding, soft_limit, dry,
 
         with open(ingestfile, "r", encoding=encoding) as ingest_io:
             client.ingest_unstructured(
-                utils.readevents_split(ingest_io, sep=separator),
+                events=utils.readevents_split(ingest_io, sep=separator),
                 fields=fields,
+                tags=tags,
+                parser=parser,
                 soft_limit=soft_limit,
                 dry=dry,
             )
@@ -541,8 +499,10 @@ def ingest(base_url, ingest_token, separator, fields, encoding, soft_limit, dry,
     if not ingestfiles:
         with click.open_file("-", "r") as ingest_stdin:
             client.ingest_unstructured(
-                utils.readevents_split(ingest_stdin, sep=separator),
+                events=utils.readevents_split(ingest_stdin, sep=separator),
                 fields=fields,
+                tags=tags,
+                parser=parser,
                 soft_limit=soft_limit,
                 dry=dry,
             )
@@ -601,7 +561,6 @@ def ingest(base_url, ingest_token, separator, fields, encoding, soft_limit, dry,
 )
 @click.option(
     "--encoding",
-    "-e",
     envvar="HUMIO_ENCODING",
     required=False,
     help="Encoding to use when reading the provided files. Autodetected if not provided",
@@ -654,14 +613,14 @@ def wizard():
     """
 
     env_file = Path.home() / ".config/humio/.env"
-    env = humioapi.loadenv(env=env_file)
+    env = humioapi.humio_loadenv(env=env_file)
 
     message = click.style("You're about to update your configuration file at", fg="green")
     message += f" {env_file}\n"
     click.echo(message=message)
 
     env["base_url"] = click.prompt(
-        click.style("Enter the base URL for your Humio install", fg="green"),
+        click.style("Enter the base URL for your Humio", fg="green"),
         default=env.get("base_url"),
         type=str,
     )
