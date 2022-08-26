@@ -47,6 +47,9 @@ def humanized_bytes(size, precision=2):
     Returns a humanized storage size string from bytes
     """
     unit = ""
+    if size is None:
+        size = 0
+
     for x in ["", "KB", "MB", "GB", "TB"]:
         if size < 1000.0:
             unit = x

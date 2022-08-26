@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "humiocli"
-version = "0.8.1"
+version = "0.9.0"
 description = "Command line interface for interacting with the Humio API using the humioapi library"
 authors = ["Jostein Haukeli"]
 repository = "https://github.com/gwtwod/humiocli"
@@ -11,7 +11,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.6.1"
+python = ">=3.8"
 tzlocal = "^2.1"
 snaptime = "^0.2.4"
 pendulum = "^2.1.2"
@@ -23,7 +23,7 @@ click = "^7.1.2"
 tabulate = "^0.8.8"
 chardet = "^4.0.0"
 colorama = "^0.4.4"
-humioapi = "^0.8.2"
+humioapi = "^0.11.0"
 ipykernel = {version = "^5.4.3", optional = true}
 Pygments = "^2.8.0"
 
@@ -41,7 +41,7 @@ to = {format = "setuppy", path = "setup.py"}
 
 [tool.black]
 line-length = 120
-target-version = ['py36', 'py37', 'py38']
+target-version = ['py38', 'py39', 'py310']
 include = '\.pyi?$'
 exclude = '''
 (/(

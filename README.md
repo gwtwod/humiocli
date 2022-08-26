@@ -78,13 +78,13 @@ Simple example:
 > _Humios bucketing currently creates partial buckets in both ends depending on search period. You may want to provide a rounded start and stop to ensure we only get whole buckets._
 
 ```bash
-hc search --repo 'sandbox*' --start=-60m@m --stop=@m "#type=accesslog | timechart(span=1m, series=statuscode)"
+hc search --repo 'sandbox' --start=-60m@m --stop=@m "#type=accesslog | timechart(span=1m, series=statuscode)"
 ```
 
 Or with a longer multiline search
 
 ```bash
-hc search --repo 'sandbox*' --start -60m@m --stop=@m  "$(cat << EOF
+hc search --repo 'sandbox' --start -60m@m --stop=@m  "$(cat << EOF
 #type=accesslog
 | case {
     statuscode<=400 | status_ok := 1 ;
@@ -101,7 +101,7 @@ EOF
 ### Upload a parser file to the destination repository, overwriting any existing parser
 
 ```bash
-hc makeparser --repo='sandbox*' customjson
+hc makeparser --repo='sandbox' customjson
 ```
 
 ### Ingest a single-line log file with an ingest-token associated with a parser

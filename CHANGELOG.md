@@ -12,6 +12,35 @@
 
 ### Removed
 
+
+## [0.9.0] - 2022-08-26
+
+This version bumps the minimum Python version to 3.8, as 3.6 is EOL, and bumps `humioapi` to `0.11.0`.
+
+### Added
+
+- Add `ingestcsv` command for ingesting CSV files. Users are expected to provide valid timestamps for each record, or ommit the timestamp option which sets the timestamp to the current time instead. Note that unlike `ingest` this API does not support reading from `stdin`.
+
+### Changed
+
+#### `repo` command
+- Changed how repositories/views are fetched from the backend to be in line with current GraphQL APIs.
+- Now defaults to short (simple) listing format for performance reasons (full listing is very slow with thousands of repos).
+- Long listing with permissions and storage details is availabe through the new `-l` flag.
+- Added description column to long listing output
+
+#### `urlsearch` command
+- Generate `hc` queries using heredoc instead of trying to quote the search string properly
+
+### Fixed
+
+- Updated various GraphQL based commands (repo and parser) to match the latest GraphQL schemas.
+- Fixed a bug where wrong env variable was checked for tags in the `ingest` command.
+
+### Deprecated
+
+### Removed
+
 ## [0.8.1] - 2021-02-18
 
 ### Changed

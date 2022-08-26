@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
 import json
+import csv
 import sys
 import os
 import re
 import shlex
 import subprocess
+from textwrap import shorten
 from pathlib import Path
 
 import click
@@ -293,6 +295,15 @@ def search(base_url, token, repo_, start, stop, color, outformat, sort, fields, 
     cls=OptionWithEnvinfo,
 )
 @click.option(
+    "--long-listing/--no-long-listing",
+    "-l",
+    envvar="HUMIO_LONG_LISTING",
+    required=False,
+    default=False,
+    help="Use long listing format including permission and storage details.",
+    cls=OptionWithEnvinfo,
+)
+@click.option(
     "--color",
     "-c",
     envvar="HUMIO_COLOR",
@@ -326,13 +337,18 @@ def search(base_url, token, repo_, start, stop, color, outformat, sort, fields, 
     cls=OptionWithEnvinfo,
 )
 @click.argument("PATTERNS", nargs=-1)
-def repo(base_url, token, color, ignore_repo, outformat, patterns):
+def repo(base_url, token, long_listing, color, ignore_repo, outformat, patterns):
     """List available repositories and views matching an optional filter."""
     utils.color_init(color)
 
     client = humioapi.HumioAPI(base_url=base_url, token=token)
 
-    repositories = utils.filter_repositories(client.repositories(), patterns, ignore=ignore_repo, strict_views=False)
+    fast = not long_listing
+    repositories = utils.filter_repositories(
+        client.repositories(fast=fast),
+        patterns, ignore=ignore_repo,
+        strict_views=False
+    )
 
     if outformat == "ipython":
         utils.run_ipython({"repositories": repositories, "client": client, "humioapi": humioapi})
@@ -349,11 +365,19 @@ def repo(base_url, token, color, ignore_repo, outformat, patterns):
             if last_ingest:
                 meta["last_ingest"] = str(last_ingest)
             meta["name"] = reponame
-            print(json.dumps(meta))
+            print(json.dumps(meta, ensure_ascii=False))
         sys.exit(0)
 
     output = []
-    for reponame, meta in sorted(repositories.items()):
+
+    def make_short_listing(reponame, meta):
+        return {
+            "Repository name": reponame,
+            "Type": meta.get("type"),
+            "Description": shorten(meta.get("description", ""), 110),
+        }
+
+    def make_long_listing(reponame, meta):
         readable = meta.get("read_permission", False)
         colorprefix = colorama.Fore.GREEN if readable else colorama.Fore.RED
 
@@ -363,7 +387,7 @@ def repo(base_url, token, color, ignore_repo, outformat, patterns):
         except (TypeError, AttributeError):
             last_ingest = colorama.Fore.RED + "no events" + colorama.Style.RESET_ALL
 
-        data = {
+        return {
             "Repository name": colorprefix + reponame + colorama.Style.RESET_ALL,
             "Last ingest": last_ingest,
             "Real size": utils.humanized_bytes(meta.get("uncompressed_bytes")),
@@ -375,8 +399,15 @@ def repo(base_url, token, color, ignore_repo, outformat, patterns):
             "Queries": _emojify(meta.get("parseradmin_permission")),
             "Files": _emojify(meta.get("parseradmin_permission")),
             "Type": meta.get("type"),
+            "Description": shorten(meta.get("description", ""), 40),
         }
-        output.append(data)
+
+    for reponame, meta in sorted(repositories.items()):
+        if long_listing:
+            output.append(make_long_listing(reponame, meta))
+        else:
+            output.append(make_short_listing(reponame, meta))
+
     print(tabulate(output, headers="keys"))
 
 
@@ -416,10 +447,10 @@ def repo(base_url, token, color, ignore_repo, outformat, patterns):
 )
 @click.option(
     "--tags",
-    envvar="HUMIO_FIELDS",
+    envvar="HUMIO_TAGS",
     required=False,
     default="{}",
-    help="Optional fields to send with all events. Must be provided as a parseable JSON object",
+    help="Optional tags to send with all events. Must be provided as a parseable JSON object",
     cls=OptionWithEnvinfo,
 )
 @click.option(
@@ -506,6 +537,95 @@ def ingest(base_url, ingest_token, separator, fields, tags, parser, encoding, so
                 soft_limit=soft_limit,
                 dry=dry,
             )
+
+
+@cli.command(short_help="Ingests pre-parsed events from CSV files into Humio")
+@click.option(
+    "--base-url",
+    "-b",
+    envvar="HUMIO_BASE_URL",
+    required=True,
+    help="Humio base URL to connect to, for example https://cloud.humio.com",
+    cls=OptionWithEnvinfo,
+)
+@click.option(
+    "--ingest-token",
+    "-t",
+    envvar="HUMIO_INGEST_TOKEN",
+    required=True,
+    help="Your *secret* ingest token found in your repository settings",
+    cls=OptionWithEnvinfo,
+)
+@click.option(
+    "--tsfield",
+    envvar="HUMIO_TSFIELD",
+    required=False,
+    help="Name of the field containing timestamps for each event. Sets current time on all events if not provided",
+    cls=OptionWithEnvinfo,
+)
+@click.option(
+    "--tags",
+    envvar="HUMIO_TAGS",
+    required=False,
+    default="{}",
+    help="Optional tags to send with all events. Must be provided as a parseable JSON object",
+    cls=OptionWithEnvinfo,
+)
+@click.option(
+    "--dialect",
+    envvar="HUMIO_DIALECT",
+    required=False,
+    help="CSV dialect to use when parsing the provided files. Autodetected if not provided",
+    cls=OptionWithEnvinfo,
+    type=click.Choice(csv.list_dialects()),
+)
+@click.option(
+    "--encoding",
+    envvar="HUMIO_ENCODING",
+    required=False,
+    help="Encoding to use when reading the provided files. Autodetected if not provided",
+    cls=OptionWithEnvinfo,
+)
+@click.option(
+    "--dry/--no-dry",
+    envvar="HUMIO_DRY_RUN",
+    required=False,
+    default=False,
+    help="Prepare ingestion without commiting any changes",
+    cls=OptionWithEnvinfo,
+)
+@click.argument("ingestfiles", nargs=-1, type=click.Path(exists=True))
+def ingestcsv(base_url, ingest_token, tsfield, tags, dialect, encoding, dry, ingestfiles):
+    """
+    Ingests events from CSV files as events with pre-parsed fields based on headers into Humio.
+
+    You should associate the ingest token with a repository and parser in Humio to control the destination.
+
+    If no encoding is provided chardet will be used to find an appropriate encoding.
+    """
+
+    client = humioapi.HumioAPI(base_url=base_url, ingest_token=ingest_token)
+    tags = json.loads(tags)
+
+    for ingestfile in ingestfiles:
+        if not encoding:
+            detected = utils.detect_encoding(ingestfile)
+            if detected["confidence"] < 0.9:
+                logger.warning(
+                    "Detected encoding has low confidence",
+                    filedetection=detected,
+                    ingestfile=ingestfile,
+                )
+            if not detected["encoding"]:
+                logger.error(
+                    "Skipping file with unknown encoding",
+                    filedetection=detected,
+                    ingestfile=ingestfile,
+                )
+                continue
+            encoding = detected["encoding"]
+
+        client.ingest_csv(ingestfile, ts_field=tsfield, tags=tags, dialect=dialect, dry=dry)
 
 
 @cli.command(short_help="Upload a parser file to a repo")
@@ -680,10 +800,16 @@ def urlsearch(ctx, dry, url):
     query, repo_, start, stop = humioapi.utils.parse_humio_url(url)
     start = humioapi.utils.tstrip(start.isoformat())
     stop = humioapi.utils.tstrip(stop.isoformat())
-    safe_query = shlex.quote(query)
 
     options = [option.split("=") for option in ctx.args]
     safe_options = ["=".join([opt[0], shlex.quote(opt[1])]) if len(opt) > 1 else opt[0] for opt in options]
+
+    safe_query = (
+        '"$(cat << HUMIOQUERY\n'
+        + query
+        + '\nHUMIOQUERY\n'
+        + ')"'
+    )
 
     if safe_options:
         command = f'hc search --repo={repo_} --start="{start}" --stop="{stop}" {" ".join(safe_options)} {safe_query}'
