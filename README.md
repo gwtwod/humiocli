@@ -1,6 +1,6 @@
 # Do things with the Humio API from the command line
 
-> This project requires `Python>=3.6.1`
+> This project requires `Python>=3.8`
 
 This is a companion CLI to the unofficial [humioapi](https://github.com/gwtwod/humioapi) library. It lets you use most of its features easily from the command line. If you're looking for the official CLI it can be found [here: humiolib](https://github.com/humio/python-humio).
 
