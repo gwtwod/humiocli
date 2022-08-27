@@ -22,6 +22,6 @@ jobs:
       - name: Install humiocli with Poetry
         run: poetry install
       - name: Run hc
-        run: hc --help
+        run: poetry run hc --help
 permissions:
   contents: read
