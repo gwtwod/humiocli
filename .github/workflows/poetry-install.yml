@@ -13,14 +13,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
       - name: Install Poetry
-        run: pipx install poetry
+        uses: snok/install-poetry@2bf112a0f6979928eb6b011f39700db589c5961e
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
       - name: Setup Python
         uses: actions/setup-python@b55428b1882923874294fa556849718a1d7f2ca5
         with:
           python-version: "3.9"
           cache: poetry
-      - name: Install humiocli with Poetry
-        run: poetry install
+      - id: cache-deps
+        name: Cache
+        uses: actions/cache@fd5de65bc895cf536527842281bea11763fefd77
+        with:
+          path: .venv
+          key: pydeps-${{ hashFiles('**/poetry.lock') }}
+      - if: steps.cache-deps.outputs.cache-hit != 'true'
+        name: Install dependencies (separately, for caching)
+        run: poetry install --no-interaction --no-root
+      - name: Install humiocli
+        run: poetry install --no-interaction
       - name: Run hc
         run: poetry run hc --help
 permissions:
