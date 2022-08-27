@@ -29,7 +29,7 @@ jobs:
           path: .venv
           key: pydeps-${{ hashFiles('**/poetry.lock') }}
       - if: steps.cache-deps.outputs.cache-hit != 'true'
-        name: Install dependencies (separately, for caching)
+        name: Install dependencies (if not in cache)
         run: poetry install --no-interaction --no-root
       - name: Install humiocli
         run: poetry install --no-interaction
