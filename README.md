@@ -1,6 +1,6 @@
 # Do things with the Humio API from the command line
 
-[![Build](https://github.com/gwtwod/humiocli/actions/workflows/poetry.yml/badge.svg)](https://github.com/gwtwod/humiocli/actions/workflows/poetry.yml)
+[![Build](https://github.com/gwtwod/humiocli/actions/workflows/poetry-build.yml/badge.svg)](https://github.com/gwtwod/humiocli/actions/workflows/poetry-build.yml)
 [![Install](https://github.com/gwtwod/humiocli/actions/workflows/poetry-install.yml/badge.svg)](https://github.com/gwtwod/humiocli/actions/workflows/poetry-install.yml)
 [![Python code quality checks](https://github.com/gwtwod/humiocli/actions/workflows/python-quality-checks.yml/badge.svg)](https://github.com/gwtwod/humiocli/actions/workflows/python-quality-checks.yml)
 
