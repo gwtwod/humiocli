@@ -40,6 +40,6 @@ jobs:
       - name: Check formatting with Black
         run: poetry run black --check ./humiocli
       - name: Check code with Pylint
-        run: poetry run pylint --disable=all --enable=import-self,pointless-statement,consider-using-f-string humiocli
+        run: poetry run pylint --disable=all --enable=import-self,pointless-statement,consider-using-f-string ./humiocli
 permissions:
   contents: read
