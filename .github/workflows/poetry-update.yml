@@ -22,3 +22,5 @@ jobs:
         run: poetry update
       - name: Create pull request
         uses: peter-evans/create-pull-request@18f90432bedd2afd6a825469ffd38aa24712a91d
+        with:
+          add-paths: poetry.lock,pyproject.toml
