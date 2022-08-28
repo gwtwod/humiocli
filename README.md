@@ -2,7 +2,7 @@
 
 [![Build](https://github.com/gwtwod/humiocli/actions/workflows/poetry.yml/badge.svg)](https://github.com/gwtwod/humiocli/actions/workflows/poetry.yml)
 [![Install](https://github.com/gwtwod/humiocli/actions/workflows/poetry-install.yml/badge.svg)](https://github.com/gwtwod/humiocli/actions/workflows/poetry-install.yml)
-[![Python code quality checks](https://github.com/staticaland/humiocli/actions/workflows/python-quality-checks.yml/badge.svg)](https://github.com/staticaland/humiocli/actions/workflows/python-quality-checks.yml)
+[![Python code quality checks](https://github.com/gwtwod/humiocli/actions/workflows/python-quality-checks.yml/badge.svg)](https://github.com/gwtwod/humiocli/actions/workflows/python-quality-checks.yml)
 
 > This project requires `Python>=3.8`
 
