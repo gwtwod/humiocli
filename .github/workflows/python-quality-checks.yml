@@ -20,9 +20,19 @@ jobs:
         uses: snok/install-poetry@2bf112a0f6979928eb6b011f39700db589c5961e
         with:
           version: 1.2.0rc2
-      - name: Do some stuff
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+      - id: cache-deps
+        name: Cache
+        uses: actions/cache@fd5de65bc895cf536527842281bea11763fefd77
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+      - if: steps.cache-deps.outputs.cache-hit != 'true'
+        name: Install dev dependencies (if not in cache)
         run: poetry install --only dev
       - name: Check formatting with Black
-        run: poetry run black --check
+        run: poetry run black --check ./humiocli
 permissions:
   contents: read
