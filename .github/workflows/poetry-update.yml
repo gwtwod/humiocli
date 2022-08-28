@@ -14,6 +14,8 @@ jobs:
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
       - name: Install Poetry
         uses: snok/install-poetry@2bf112a0f6979928eb6b011f39700db589c5961e
+        with:
+          version: 1.2.0rc2
       - name: Setup Python
         uses: actions/setup-python@b55428b1882923874294fa556849718a1d7f2ca5
         with:
