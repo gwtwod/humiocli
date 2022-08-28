@@ -41,7 +41,7 @@ to = {format = "setuppy", path = "setup.py"}
 
 [tool.black]
 line-length = 120
-target-version = ['py38', 'py39', 'py310']
+target-version = ['py38', 'py39']
 include = '\.pyi?$'
 exclude = '''
 (/(
