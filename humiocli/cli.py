@@ -345,9 +345,7 @@ def repo(base_url, token, long_listing, color, ignore_repo, outformat, patterns)
 
     fast = not long_listing
     repositories = utils.filter_repositories(
-        client.repositories(fast=fast),
-        patterns, ignore=ignore_repo,
-        strict_views=False
+        client.repositories(fast=fast), patterns, ignore=ignore_repo, strict_views=False
     )
 
     if outformat == "ipython":
@@ -804,12 +802,7 @@ def urlsearch(ctx, dry, url):
     options = [option.split("=") for option in ctx.args]
     safe_options = ["=".join([opt[0], shlex.quote(opt[1])]) if len(opt) > 1 else opt[0] for opt in options]
 
-    safe_query = (
-        '"$(cat << HUMIOQUERY\n'
-        + query
-        + '\nHUMIOQUERY\n'
-        + ')"'
-    )
+    safe_query = '"$(cat << HUMIOQUERY\n' + query + "\nHUMIOQUERY\n" + ')"'
 
     if safe_options:
         command = f'hc search --repo={repo_} --start="{start}" --stop="{stop}" {" ".join(safe_options)} {safe_query}'
