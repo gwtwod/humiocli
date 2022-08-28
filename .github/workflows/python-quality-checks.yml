@@ -23,6 +23,11 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
           installer-parallel: true
+      - id: setup-python
+        name: Setup Python
+        uses: actions/setup-python@b55428b1882923874294fa556849718a1d7f2ca5
+        with:
+          python-version: 3.10.6
       - id: cache-deps
         name: Cache
         uses: actions/cache@fd5de65bc895cf536527842281bea11763fefd77
