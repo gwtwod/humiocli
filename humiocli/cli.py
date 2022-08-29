@@ -21,7 +21,7 @@ from tabulate import tabulate
 import humioapi
 from humiocli import prettyxml, utils
 
-# Make environment variables available
+# Make environment variables available ok
 humioapi.humio_loadenv()
 
 logger = structlog.getLogger(__name__)
