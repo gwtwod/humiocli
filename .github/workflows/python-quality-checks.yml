@@ -8,7 +8,12 @@ name: Python code quality checks
       - '**.py'
       - pyproject.toml
       - poetry.lock
-  workflow_dispatch: null
+  pull_request:
+    paths:
+      - '**.py'
+      - pyproject.toml
+      - poetry.lock
+  workflow_dispatch: {}
 jobs:
   lint:
     name: Lint and check the Python project

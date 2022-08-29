@@ -8,7 +8,12 @@ name: Install
       - '**.py'
       - pyproject.toml
       - poetry.lock
-  workflow_dispatch: null
+  pull_request:
+    paths:
+      - '**.py'
+      - pyproject.toml
+      - poetry.lock
+  workflow_dispatch: {}
 jobs:
   build:
     name: Install humiocli
